@@ -1,0 +1,35 @@
+# Neo4j local para o grafo de animes/mangás.
+#
+# Subir:            docker compose --env-file config/.env up -d
+# Criar o schema:   docker compose --env-file config/.env exec neo4j sh -c 'cypher-shell -u neo4j -p "${NEO4J_AUTH#neo4j/}" -f /schema/constraints.cypher'
+#   (variáveis NEO4J_* no container viram config do Neo4j, por isso a senha sai do NEO4J_AUTH)
+# Navegador:        http://localhost:7474  (usuário neo4j, senha em config/.env)
+
+services:
+  neo4j:
+    image: neo4j:2026.09-community
+    container_name: anime-graphrag-neo4j
+    ports:
+      - "7474:7474"  # Neo4j Browser (HTTP)
+      - "7687:7687"  # Bolt (driver Python)
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?defina NEO4J_PASSWORD em config/.env}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1g
+      NEO4J_server_memory_pagecache_size: 512m
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - ./schema:/schema:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  neo4j-data:
+  neo4j-logs:

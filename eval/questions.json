@@ -1,0 +1,77 @@
+[
+  {
+    "id": "E1",
+    "pergunta": "Quais são os 10 animes com maior nota?",
+    "cypher": "MATCH (a:Anime {completo: true}) RETURN a.titulo, a.nota ORDER BY a.nota DESC LIMIT 10"
+  },
+  {
+    "id": "E3",
+    "pergunta": "Quantos animes do top existem em cada década, e qual a nota média de cada década?",
+    "cypher": "MATCH (a:Anime {completo: true}) RETURN (a.ano / 10) * 10 AS decada, count(*) AS n, round(avg(a.nota), 2) AS media ORDER BY decada"
+  },
+  {
+    "id": "E4",
+    "pergunta": "Quais são os 10 estúdios com mais animes no top, e qual a nota média dos animes de cada um?",
+    "cypher": "MATCH (a:Anime {completo: true})-[:PRODUCED_BY]->(s:Studio) RETURN s.nome, count(a) AS n, round(avg(a.nota), 2) AS media ORDER BY n DESC LIMIT 10"
+  },
+  {
+    "id": "E5",
+    "pergunta": "Quais são os 10 pares de gêneros que mais aparecem juntos no mesmo anime?",
+    "cypher": "MATCH (g1:Genre)<-[:HAS_GENRE]-(a:Anime {completo: true})-[:HAS_GENRE]->(g2:Genre) WHERE g1.nome < g2.nome RETURN g1.nome, g2.nome, count(a) AS n ORDER BY n DESC LIMIT 10"
+  },
+  {
+    "id": "E6",
+    "pergunta": "Quais autores têm 3 ou mais mangás no top, e quantos cada um tem?",
+    "cypher": "MATCH (p:Author)<-[:WRITTEN_BY]-(m:Manga {completo: true}) WITH p, count(m) AS n WHERE n >= 3 RETURN p.nome, n ORDER BY n DESC"
+  },
+  {
+    "id": "E7",
+    "pergunta": "Quais animes do top têm 25 ou mais conexões de recomendação?",
+    "cypher": "MATCH (a:Anime {completo: true}) WITH a, COUNT { (a)-[:RECOMMENDS]-() } AS grau WHERE grau >= 25 RETURN a.titulo, grau ORDER BY grau DESC"
+  },
+  {
+    "id": "E8",
+    "pergunta": "Entre os animes recomendados para quem gostou de Monster, quais têm no máximo 26 episódios e pelo menos 5 votos de recomendação?",
+    "cypher": "MATCH (:Anime {titulo: 'Monster'})-[r:RECOMMENDS]-(o:Anime {completo: true}) WHERE o.episodios <= 26 AND r.votos >= 5 RETURN o.titulo, r.votos ORDER BY r.votos DESC"
+  },
+  {
+    "id": "E9",
+    "pergunta": "Quais animes do top ficam a dois passos de Monster na rede de recomendações, sem serem recomendados diretamente com ele, e são alcançados por pelo menos 3 caminhos diferentes?",
+    "cypher": "MATCH (m:Anime {titulo: 'Monster'})-[:RECOMMENDS]-(v)-[:RECOMMENDS]-(o:Anime {completo: true}) WHERE o <> m AND NOT (m)-[:RECOMMENDS]-(o) WITH o, count(DISTINCT v) AS caminhos WHERE caminhos >= 3 RETURN o.titulo, caminhos ORDER BY caminhos DESC"
+  },
+  {
+    "id": "E10",
+    "pergunta": "Quantos passos tem o menor caminho na rede de recomendações entre Sousou no Frieren e Monster?",
+    "cypher": "MATCH p = shortestPath((a:Anime {titulo: 'Sousou no Frieren'})-[:RECOMMENDS*..6]-(b:Anime {titulo: 'Monster'})) RETURN length(p) AS passos"
+  },
+  {
+    "id": "E11",
+    "pergunta": "Quais animes psicológicos têm nota acima de 8 e no máximo 13 episódios?",
+    "cypher": "MATCH (a:Anime {completo: true})-[:HAS_GENRE]->(:Genre {nome: 'Psychological'}) WHERE a.nota > 8 AND a.episodios <= 13 RETURN a.titulo ORDER BY a.nota DESC"
+  },
+  {
+    "id": "E12",
+    "pergunta": "Quais animes do top têm similaridade de Jaccard de pelo menos 0,5 com os gêneros de Monster, e cada um deles é recomendado junto com Monster?",
+    "cypher": "MATCH (m:Anime {titulo: 'Monster'})-[:HAS_GENRE]->(g)<-[:HAS_GENRE]-(o:Anime {completo: true}) WITH m, o, count(g) AS inter WITH m, o, inter, COUNT { (m)-[:HAS_GENRE]->() } + COUNT { (o)-[:HAS_GENRE]->() } - inter AS uniao WITH m, o, round(1.0 * inter / uniao, 2) AS jaccard WHERE jaccard >= 0.5 RETURN o.titulo, jaccard, EXISTS { (m)-[:RECOMMENDS]-(o) } AS recomendado ORDER BY jaccard DESC"
+  },
+  {
+    "id": "E13",
+    "pergunta": "Quantos animes do top não têm nenhuma recomendação?",
+    "cypher": "MATCH (a:Anime {completo: true}) WHERE NOT (a)-[:RECOMMENDS]-() RETURN count(*) AS n"
+  },
+  {
+    "id": "E14",
+    "pergunta": "Quais animes fora do top (nós incompletos) têm 9 ou mais conexões de recomendação?",
+    "cypher": "MATCH (s:Anime {completo: false}) WITH s, COUNT { (s)-[:RECOMMENDS]-() } AS grau WHERE grau >= 9 RETURN s.titulo, grau ORDER BY grau DESC"
+  },
+  {
+    "id": "E15",
+    "pergunta": "Dos animes do top sem nenhuma recomendação, quantos se ligam, por uma cadeia de animes relacionados, a algum anime que tem recomendações?",
+    "cypher": "MATCH (a:Anime {completo: true}) WHERE NOT (a)-[:RECOMMENDS]-() RETURN count(CASE WHEN EXISTS { (a)-[:RELATED_TO*1..10]-(:Anime)-[:RECOMMENDS]-() } THEN 1 END) AS conectados"
+  },
+  {
+    "id": "E16",
+    "pergunta": "Em que ordem assistir a cadeia de sequências de Shingeki no Kyojin, do primeiro ao último?",
+    "cypher": "MATCH p = (a:Anime {titulo: 'Shingeki no Kyojin'})-[:RELATED_TO*1..10 {tipo: 'sequel'}]->(b) WHERE NOT (b)-[:RELATED_TO {tipo: 'sequel'}]->() RETURN [n IN nodes(p) | n.titulo] AS ordem ORDER BY length(p) DESC LIMIT 1"
+  }
+]
