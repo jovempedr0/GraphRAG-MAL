@@ -1,6 +1,6 @@
 ---
 tags: [projeto, graphrag, agentes, anime]
-status: planejamento
+status: em andamento
 criado: 2026-10-01
 ---
 

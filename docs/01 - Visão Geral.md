@@ -23,10 +23,10 @@ MyAnimeList (API oficial v2)
    Neo4j (grafo + índice vetorial)               → [[03 - Modelo do Grafo]]
         ▲
         │  pergunta → Cypher validado → analytics
-   Gerador de Cypher (Claude)                    → [[07 - Gerador de Cypher]]
+   Gerador de Cypher (gpt-oss-20b local)         → [[07 - Gerador de Cypher]]
         ▲
         │  ferramentas (busca semântica, vizinhança, consulta_cypher)
-   Agente (Claude + tool use)                    → [[04 - Agente GraphRAG]]
+   Agente (tool use, local ou Claude)            → [[04 - Agente GraphRAG]]
         ▲
         │
      Usuário (CLI ou chat)
@@ -38,7 +38,8 @@ MyAnimeList (API oficial v2)
 | Linguagem | Python | ecossistema de dados e SDKs |
 | Banco | Neo4j (Docker local) | Cypher, índice vetorial nativo, muitos tutoriais |
 | Fonte | API MAL v2 | oficial, só Client ID, recomendações no detalhe |
-| Agente | Claude via tool use | controle total do loop, bom para aprender |
+| Gerador de Cypher | gpt-oss-20b via oMLX (local) | acertou 14/15 na avaliação, ~7 s por pergunta; ver [[07 - Gerador de Cypher]] |
+| Agente | tool use com backend trocável: gpt-oss-20b (oMLX) ou Claude | loop próprio, bom para aprender; comparar local × nuvem na avaliação |
 | Embeddings | BGE-M3 via oMLX (local) | multilíngue, grátis, offline; ver [[04 - Agente GraphRAG]] |
 
 ## Estrutura de pastas prevista

@@ -23,7 +23,7 @@ Voltar: [[00 - Índice GraphRAG Anime]] · Anterior: [[02 - Ingestão de Dados]]
 |---|---|---|
 | `HAS_GENRE` | Anime/Manga → Genre | — |
 | `RECOMMENDS` | Anime → Anime, Manga → Manga | `votos` — um sentido só, do menor `mal_id` para o maior; consultar com `-[:RECOMMENDS]-` |
-| `ADAPTED_FROM` | Anime → Manga | — |
+| `ADAPTED_FROM` | Anime → Manga | — **(planejada, ainda não existe no banco**; ver Questões em aberto) |
 | `PRODUCED_BY` | Anime → Studio | — |
 | `WRITTEN_BY` | Manga → Author | `papel` (ex.: Story & Art) |
 | `RELATED_TO` | Anime → Anime, Manga → Manga | `tipo` — `(a)-[:RELATED_TO {tipo}]->(b)` = "b é `tipo` de a" |
@@ -43,6 +43,7 @@ WHERE a.nota > 8
 RETURN a.titulo, a.nota ORDER BY a.nota DESC LIMIT 10;
 
 // Mangás bem avaliados sem adaptação em anime
+// (só funciona depois que ADAPTED_FROM existir; hoje volta todos os mangás com nota > 8)
 MATCH (m:Manga)
 WHERE m.nota > 8 AND NOT EXISTS { (:Anime)-[:ADAPTED_FROM]->(m) }
 RETURN m.titulo, m.nota ORDER BY m.nota DESC LIMIT 20;
@@ -51,6 +52,7 @@ RETURN m.titulo, m.nota ORDER BY m.nota DESC LIMIT 20;
 ## Decisões
 - 2026-10-01: `RECOMMENDS` num sentido só (menor → maior `mal_id`)
 - 2026-10-01: `RELATED_TO {tipo}` normalizado, uma aresta por par
+- 2026-10-01: o gerador de Cypher lê o schema do próprio banco (`analytics/schema.py`), então esta nota não precisa ser a fonte da verdade para ele
 
 **`RELATED_TO`:** o MAL lista cada relação nas duas páginas com tipos inversos. O loader guarda uma aresta por par:
 - tipos inversos são normalizados invertendo a seta: `prequel` → `sequel`, `parent_story` → `side_story`, `full_story` → `summary`

@@ -7,7 +7,11 @@ tags: [projeto, graphrag, agentes, tool-use]
 Voltar: [[00 - Índice GraphRAG Anime]] · Anterior: [[07 - Gerador de Cypher]] · Próxima: [[05 - Roadmap e Avaliação]]
 
 ## Ideia
-O agente (Claude via tool use, em Python) decide qual ferramenta chamar, junta o contexto vindo do grafo e responde. Em vez de um pipeline fixo, o modelo escolhe o caminho.
+O agente (tool use, em Python) decide qual ferramenta chamar, junta o contexto vindo do grafo e responde. Em vez de um pipeline fixo, o modelo escolhe o caminho.
+
+**Modelo (decisão de 2026-10-01): backend trocável.** `AGENT_BACKEND=omlx|anthropic`, com uma camada fina sobre as duas APIs de tool use. Começa pelo local (**gpt-oss-20b**, o mesmo do gerador de Cypher, então um modelo só na memória). O Claude entra depois como comparação na avaliação ([[05 - Roadmap e Avaliação]]).
+- A favor do local: grátis, offline, um modelo só nos 24 GB
+- Contra: agentes locais se perdem mais no loop (ferramenta errada, chamadas repetidas) e cada passo leva ~7 s. Por isso o loop precisa de limite de passos e checagem dos argumentos
 
 ## Preparação (etapa 5 ✅)
 - Modelo: **BGE-M3** (`bge-m3-mlx-fp16`) servido localmente pelo **oMLX** (`/v1/embeddings`, API compatível com OpenAI). 1024 dimensões, multilíngue, licença MIT
@@ -28,7 +32,7 @@ O agente (Claude via tool use, em Python) decide qual ferramenta chamar, junta o
 |---|---|
 | `busca_semantica(texto)` | acha nós de entrada pela similaridade da sinopse |
 | `expandir_vizinhanca(id, hops)` | percorre recomendações, gêneros, estúdio, adaptações |
-| `consulta_cypher(pergunta)` | perguntas estruturadas (filtros, ranking, agregações, analytics); usa o gerador de [[07 - Gerador de Cypher]] |
+| `consulta_cypher(pergunta)` | perguntas estruturadas (filtros, ranking, agregações, analytics); chama `analytics.generator.generate` de [[07 - Gerador de Cypher]] |
 
 ## Loop do agente
 ```
