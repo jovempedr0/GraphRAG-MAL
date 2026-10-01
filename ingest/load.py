@@ -4,7 +4,9 @@ Uso:
     uv run --env-file config/.env python -m ingest.load
 
 Itens recomendados que não estão no top entram como nós "esboço"
-(só mal_id e titulo, completo = false). Se depois forem coletados, viram completos.
+(só mal_id e titulo, completo = false). Se depois forem coletados (ingest.crawl), viram
+completos. `top` diz se o item está no ranking coletado por ingest.fetch; `completo`
+só diz se o nó tem os detalhes.
 
 RECOMMENDS é guardado num sentido só, do menor mal_id para o maior: o MAL
 lista o mesmo par nas duas páginas, e nas consultas a direção é ignorada
@@ -120,7 +122,7 @@ def manga_row(d):
 BASE_QUERY = """
 UNWIND $rows AS row
 MERGE (n:{label} {{mal_id: row.mal_id}})
-SET n += row.props, n.completo = true
+SET n += row.props, n.completo = true, n.top = row.top
 WITH n, row
 CALL (n, row) {{
   UNWIND row.generos AS nome
@@ -130,7 +132,7 @@ CALL (n, row) {{
 CALL (n, row) {{
   UNWIND row.recomendacoes AS rec
   MERGE (o:{label} {{mal_id: rec.mal_id}})
-    ON CREATE SET o.titulo = rec.titulo, o.completo = false
+    ON CREATE SET o.titulo = rec.titulo, o.completo = false, o.top = false
   WITH CASE WHEN n.mal_id < o.mal_id THEN [n, o] ELSE [o, n] END AS par, rec
   WITH par[0] AS origem, par[1] AS destino, rec
   MERGE (origem)-[r:RECOMMENDS]->(destino)
@@ -139,7 +141,7 @@ CALL (n, row) {{
 CALL (n, row) {{
   UNWIND row.relacionados AS rel
   MERGE (o:{label} {{mal_id: rel.mal_id}})
-    ON CREATE SET o.titulo = rel.titulo, o.completo = false
+    ON CREATE SET o.titulo = rel.titulo, o.completo = false, o.top = false
   WITH CASE WHEN rel.saida THEN [n, o] ELSE [o, n] END AS par, rel
   WITH par[0] AS origem, par[1] AS destino, rel
   MERGE (origem)-[:RELATED_TO {{tipo: rel.tipo}}]->(destino)
@@ -169,13 +171,19 @@ KINDS = {
 
 
 def read_rows(kind, raw_dir="data/raw", state_dir="data/state"):
+    """Itens do top e do crawl que estão no cache, com a marca `top`."""
     _, to_row, _ = KINDS[kind]
-    ids = json.loads((Path(state_dir) / f"top_{kind}_ids.json").read_text())
+    top = json.loads((Path(state_dir) / f"top_{kind}_ids.json").read_text())
+    crawl_path = Path(state_dir) / f"crawl_{kind}_ids.json"
+    crawled = json.loads(crawl_path.read_text()) if crawl_path.exists() else []
+    top_set = set(top)
     rows, missing = [], []
-    for mal_id in ids:
+    for mal_id in dict.fromkeys(top + crawled):
         path = Path(raw_dir) / kind / f"{mal_id}.json"
         if path.exists():
-            rows.append(to_row(json.loads(path.read_text())))
+            row = to_row(json.loads(path.read_text()))
+            row["top"] = mal_id in top_set
+            rows.append(row)
         else:
             missing.append(mal_id)
     if missing:
@@ -208,6 +216,8 @@ def main():
         driver.verify_connectivity()
         for kind in KINDS:
             load(driver, kind, read_rows(kind))
+        # Nós criados antes de existir a propriedade `top`
+        driver.execute_query("MATCH (n) WHERE (n:Anime OR n:Manga) AND n.top IS NULL SET n.top = false")
         records, _, _ = driver.execute_query(COUNTS)
         for r in records:
             log.info("  %-12s %6d", r["tipo"], r["total"])

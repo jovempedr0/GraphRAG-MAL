@@ -50,7 +50,12 @@ def fetch_top(client, kind, limit, state_dir="data/state"):
 
     ids = top_ids(client, kind, limit)
     (state_dir / f"top_{kind}_ids.json").write_text(json.dumps(ids))
+    fetch_details(client, kind, ids, state_dir / f"failed_{kind}.json")
+    return ids
 
+
+def fetch_details(client, kind, ids, failed_path):
+    """Busca o detalhe de cada id (o cache evita repetir) e grava as falhas em failed_path."""
     fields = ",".join(FIELDS[kind])
     failures = []
     for n, mal_id in enumerate(ids, 1):
@@ -63,9 +68,9 @@ def fetch_top(client, kind, limit, state_dir="data/state"):
         if n % 25 == 0:
             log.info("%s: %d/%d", kind, n, len(ids))
 
-    (state_dir / f"failed_{kind}.json").write_text(json.dumps(failures, indent=2))
+    Path(failed_path).write_text(json.dumps(failures, indent=2))
     log.info("%s: %d itens, %d falhas", kind, len(ids), len(failures))
-    return ids
+    return failures
 
 
 def main():

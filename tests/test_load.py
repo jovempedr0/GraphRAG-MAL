@@ -136,3 +136,16 @@ def test_related_symmetric_types_point_from_lower_id():
 def test_rows_include_same_kind_relations():
     assert anime_row({"id": 1, "title": "X", "related_anime": [rel(2, "sequel")]})["relacionados"][0]["mal_id"] == 2
     assert manga_row({"id": 1, "title": "X", "related_manga": [rel(3, "spin_off")]})["relacionados"][0]["tipo"] == "spin_off"
+
+
+def test_read_rows_marks_top_and_includes_crawled(tmp_path):
+    import json as _json
+    from ingest.load import read_rows
+    (tmp_path / "state").mkdir()
+    (tmp_path / "raw" / "anime").mkdir(parents=True)
+    (tmp_path / "state" / "top_anime_ids.json").write_text("[1]")
+    (tmp_path / "state" / "crawl_anime_ids.json").write_text("[2, 1, 3]")
+    for i in (1, 2):
+        (tmp_path / "raw" / "anime" / f"{i}.json").write_text(_json.dumps({"id": i, "title": f"t{i}"}))
+    rows = read_rows("anime", raw_dir=tmp_path / "raw", state_dir=tmp_path / "state")
+    assert [(r["mal_id"], r["top"]) for r in rows] == [(1, True), (2, False)]

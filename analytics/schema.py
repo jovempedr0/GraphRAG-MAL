@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 
 # O que a introspecção não mostra: semântica das arestas e cuidados com os dados.
 CONVENTIONS = """\
-- Nós com `completo = false` são esboços: só têm `mal_id` e `titulo`. Filtre `{completo: true}` sempre que a pergunta envolver nota, gênero, estúdio, ano ou episódios, ou falar em "top"
-- "Do top" quer dizer `completo = true` (os itens do ranking do MyAnimeList); não é um corte de nota. Não invente filtros que a pergunta não pede
+- Nós com `completo = false` são esboços: só têm `mal_id` e `titulo`. Filtre `{completo: true}` sempre que a pergunta envolver nota, gênero, estúdio, ano ou episódios
+- `top = true` marca os 500 animes e os 500 mangás do ranking do MyAnimeList. "Do top" quer dizer `{top: true}` (não é um corte de nota); "fora do top" é `{top: false}`. Não invente filtros que a pergunta não pede
 - `ORDER BY ... DESC` põe os nulos primeiro: ao ordenar por uma propriedade que pode faltar, filtre `IS NOT NULL`
 - `RECOMMENDS` está gravada num sentido só e não tem direção de significado: consulte sempre sem seta, `(a)-[r:RECOMMENDS]-(b)`
 - `votos` é propriedade da aresta `RECOMMENDS` (`r.votos`), não dos nós

@@ -67,7 +67,10 @@ async function loadStatus() {
     const adapt = (s.relacoes.find((r) => r.tipo === "ADAPTED_FROM") || {}).total || 0;
     const models = Array.isArray(s.modelos_omlx) ? "oMLX ok" : "oMLX fora do ar";
     $("#status").textContent =
-      `Anime ${n.Anime?.completos ?? 0}/${n.Anime?.total ?? 0} completos · Mangá ${n.Manga?.completos ?? 0}/${n.Manga?.total ?? 0} · ADAPTED_FROM ${adapt} · ${models}`;
+      [["Anime", n.Anime], ["Mangá", n.Manga]].map(([nome, x]) =>
+        `${nome}: ${(x?.completos ?? 0).toLocaleString("pt-BR")} completos (${x?.top ?? 0} top) · ${((x?.total ?? 0) - (x?.completos ?? 0)).toLocaleString("pt-BR")} esboços`)
+        .join(" | ") + ` | ADAPTED_FROM ${adapt} · ${models}`;
+    $("#status").title = "Completos: nós com todos os detalhes. Esboços: obras citadas por recomendações ou relações, só com título.";
     const opt = $("#backend option[value=anthropic]");
     if (!s.anthropic_configurado) { opt.disabled = true; opt.textContent = "Claude (sem ANTHROPIC_API_KEY)"; }
     $("#backend").value = s.agent_backend === "anthropic" && s.anthropic_configurado ? "anthropic" : "omlx";

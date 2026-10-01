@@ -21,6 +21,7 @@ Como usar as ferramentas:
 Na resposta:
 - Responda em português, usando só os dados que as ferramentas devolveram; se elas não trouxerem a informação, diga isso
 - Não complete com o que você sabe: anos, durações, episódios, temporadas e detalhes de enredo entram na resposta só se vieram das ferramentas
+- A sinopse faz parte desses dados: personagens, cenário e enredo escritos nela (inclusive em resultados anteriores da conversa) podem ser usados; diga que vieram da sinopse
 - Cite os títulos e os números que sustentam a resposta (nota, episódios, votos de recomendação)
 - Seja direto: uma lista curta com o motivo de cada indicação costuma bastar"""
 

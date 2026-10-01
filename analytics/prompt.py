@@ -43,13 +43,13 @@ RETURN s.titulo AS sequencia""",
     ),
     (
         "Quantos mangás do top cada autor escreveu, em média com qual nota? Mostre os 5 com mais mangás.",
-        """MATCH (m:Manga {completo: true})-[:WRITTEN_BY]->(p:Author)
+        """MATCH (m:Manga {top: true})-[:WRITTEN_BY]->(p:Author)
 RETURN p.nome AS autor, count(m) AS n, round(avg(m.nota), 2) AS media
 ORDER BY n DESC LIMIT 5""",
     ),
     (
         "Quantos animes de ação do top não têm nenhuma sequência?",
-        """MATCH (a:Anime {completo: true})-[:HAS_GENRE]->(:Genre {nome: 'Action'})
+        """MATCH (a:Anime {top: true})-[:HAS_GENRE]->(:Genre {nome: 'Action'})
 WHERE NOT EXISTS { (a)-[:RELATED_TO {tipo: 'sequel'}]->() }
 RETURN count(a) AS n""",
     ),

@@ -1,0 +1,182 @@
+[
+  {
+    "id": "A1",
+    "categoria": "recomendação",
+    "pergunta": "Me indica algo parecido com Monster, mas mais curto",
+    "ferramentas": [
+      "expandir_vizinhanca"
+    ],
+    "esperados": "MATCH (:Anime {titulo: 'Monster'})-[r:RECOMMENDS]-(o:Anime {completo: true}) WHERE o.episodios < 74 RETURN o.titulo, o.titulo_en ORDER BY r.votos DESC LIMIT 5",
+    "min_esperados": 2
+  },
+  {
+    "id": "A2",
+    "categoria": "filtro",
+    "pergunta": "Quais animes de terror psicológico têm nota acima de 8 e no máximo 13 episódios?",
+    "ferramentas": [
+      "consulta_cypher"
+    ],
+    "esperados": "MATCH (a:Anime {completo: true})-[:HAS_GENRE]->(:Genre {nome: 'Horror'}) WHERE EXISTS { (a)-[:HAS_GENRE]->(:Genre {nome: 'Psychological'}) } AND a.nota > 8 AND a.episodios <= 13 RETURN a.titulo, a.titulo_en",
+    "min_esperados": 0.6
+  },
+  {
+    "id": "A3",
+    "categoria": "semântica",
+    "pergunta": "Quero um anime sobre luto e perda",
+    "ferramentas": [
+      "busca_semantica"
+    ]
+  },
+  {
+    "id": "A4",
+    "categoria": "franquia",
+    "pergunta": "Em que ordem eu assisto Attack on Titan?",
+    "ferramentas": [
+      "expandir_vizinhanca"
+    ],
+    "esperados": "MATCH p = (:Anime {titulo: 'Shingeki no Kyojin'})-[:RELATED_TO*0..20 {tipo: 'sequel'}]->(b) WHERE NOT (b)-[:RELATED_TO {tipo: 'sequel'}]->() WITH p ORDER BY length(p) DESC LIMIT 1 UNWIND nodes(p) AS n RETURN n.titulo, n.titulo_en",
+    "min_esperados": 1.0
+  },
+  {
+    "id": "A5",
+    "categoria": "agregação",
+    "pergunta": "Qual estúdio tem a maior nota média entre os que têm pelo menos 10 animes no top?",
+    "ferramentas": [
+      "consulta_cypher"
+    ],
+    "esperados": "MATCH (a:Anime {top: true})-[:PRODUCED_BY]->(s:Studio) WITH s, count(a) AS n, avg(a.nota) AS media WHERE n >= 10 RETURN s.nome, null ORDER BY media DESC LIMIT 1",
+    "min_esperados": 1
+  },
+  {
+    "id": "A6",
+    "categoria": "fato",
+    "pergunta": "Quantos episódios tem Frieren e qual é a nota dele?",
+    "ferramentas": [
+      "expandir_vizinhanca",
+      "consulta_cypher"
+    ],
+    "deve_conter": [
+      "28",
+      "9.25"
+    ]
+  },
+  {
+    "id": "A7",
+    "categoria": "multi-hop",
+    "pergunta": "Que animes são recomendados tanto para quem gostou de Death Note quanto para quem gostou de Code Geass?",
+    "ferramentas": [
+      "expandir_vizinhanca",
+      "consulta_cypher"
+    ],
+    "esperados": "MATCH (:Anime {titulo: 'Death Note'})-[:RECOMMENDS]-(o:Anime)-[:RECOMMENDS]-(:Anime {titulo: 'Code Geass: Hangyaku no Lelouch'}) RETURN DISTINCT o.titulo, o.titulo_en",
+    "min_esperados": 0.6
+  },
+  {
+    "id": "A8",
+    "categoria": "recomendação",
+    "pergunta": "Me recomenda um mangá parecido com Berserk",
+    "ferramentas": [
+      "expandir_vizinhanca"
+    ],
+    "esperados": "MATCH (:Manga {titulo: 'Berserk'})-[r:RECOMMENDS]-(o:Manga) RETURN o.titulo, o.titulo_en ORDER BY r.votos DESC LIMIT 5",
+    "min_esperados": 2
+  },
+  {
+    "id": "A9",
+    "categoria": "filtro",
+    "pergunta": "Quais são os 5 mangás do top com maior nota que não têm adaptação em anime?",
+    "ferramentas": [
+      "consulta_cypher"
+    ],
+    "esperados": "MATCH (m:Manga {top: true}) WHERE NOT EXISTS { (:Anime)-[:ADAPTED_FROM]->(m) } RETURN m.titulo, m.titulo_en ORDER BY m.nota DESC LIMIT 5",
+    "min_esperados": 0.6
+  },
+  {
+    "id": "A10",
+    "categoria": "filtro",
+    "pergunta": "Me indica um anime de esporte do top com no máximo 13 episódios",
+    "ferramentas": [
+      "consulta_cypher",
+      "busca_semantica"
+    ],
+    "esperados": "MATCH (a:Anime {top: true})-[:HAS_GENRE]->(:Genre {nome: 'Sports'}) WHERE a.episodios <= 13 RETURN a.titulo, a.titulo_en",
+    "min_esperados": 1
+  },
+  {
+    "id": "A11",
+    "categoria": "sem resposta",
+    "pergunta": "Qual foi a bilheteria do filme de Chainsaw Man?",
+    "ferramentas": [],
+    "deve_conter_algum": [
+      "não tem",
+      "não há",
+      "não possui",
+      "não consta",
+      "não traz",
+      "não está",
+      "não encontrei",
+      "não disponível",
+      "indisponível",
+      "sem informação",
+      "não contém"
+    ]
+  },
+  {
+    "id": "A12",
+    "categoria": "multi-hop",
+    "pergunta": "Quem escreveu o mangá Monster, e que outros mangás dessa pessoa estão no grafo?",
+    "ferramentas": [
+      "expandir_vizinhanca",
+      "consulta_cypher"
+    ],
+    "deve_conter": [
+      "Urasawa"
+    ],
+    "esperados": "MATCH (:Manga {titulo: 'Monster'})-[:WRITTEN_BY]->(p:Author)<-[:WRITTEN_BY]-(o:Manga {completo: true}) WHERE o.titulo <> 'Monster' RETURN DISTINCT o.titulo, o.titulo_en",
+    "min_esperados": 0.5
+  },
+  {
+    "id": "A13",
+    "categoria": "sinopse",
+    "pergunta": "Qual o nome do protagonista de Bleach?",
+    "ferramentas": [
+      "expandir_vizinhanca",
+      "busca_semantica"
+    ],
+    "deve_conter": [
+      "Ichigo"
+    ]
+  },
+  {
+    "id": "A14",
+    "categoria": "sem resposta",
+    "pergunta": "Quais são os episódios fillers de Bleach?",
+    "ferramentas": [],
+    "deve_conter_algum": [
+      "não tem",
+      "não há",
+      "não possui",
+      "não consta",
+      "não traz",
+      "não está",
+      "não encontrei",
+      "não disponível",
+      "indisponível",
+      "sem informação",
+      "não contém",
+      "não inclui"
+    ]
+  },
+  {
+    "id": "A15",
+    "categoria": "continuação",
+    "antes": [
+      "Quais os episódios fillers de bleack"
+    ],
+    "pergunta": "Qual o nome do personagem principal do anime?",
+    "ferramentas": [],
+    "deve_conter": [
+      "Ichigo"
+    ]
+  }
+]
