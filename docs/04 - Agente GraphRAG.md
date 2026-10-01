@@ -40,6 +40,32 @@ pergunta → modelo decide ferramenta → executa → resultado volta ao modelo
         → (repete até ter contexto suficiente) → resposta final com justificativa
 ```
 
+## Implementação v1 (2026-10-01)
+```
+uv run --env-file config/.env python -m agent "me indica algo parecido com Monster, mas mais curto"
+uv run --env-file config/.env python -m agent      # conversa
+```
+| Arquivo | Papel |
+|---|---|
+| `agent/backends.py` | `OmlxBackend` (API OpenAI do oMLX) e `AnthropicBackend` (SDK oficial, `claude-opus-5-5`, fallback de recusa `fallbacks: "default"`); cada um guarda o histórico no formato nativo, só por append |
+| `agent/tools.py` | as três ferramentas, validação de argumentos, resultado em JSON sem nulos (máx. 10 mil caracteres) |
+| `agent/loop.py` | prompt de sistema e loop: até 8 passos, chamadas repetidas não reexecutam, no limite pede a resposta sem ferramentas |
+| `agent/__main__.py` | CLI; log de cada pergunta em `data/logs/agent.jsonl` |
+
+Detalhes das ferramentas:
+- `busca_semantica`: um resultado por franquia (agrupa por `RELATED_TO` até 6 saltos; com 3, os filmes de Haikyuu escapavam)
+- `expandir_vizinhanca`: resolve o título em romaji ou inglês ("Attack on Titan" → Shingeki no Kyojin) e devolve recomendações, relacionados, a **cadeia de sequências completa** e, com `saltos=2`, o segundo grau
+- `consulta_cypher`: chama o gerador da nota 07; recusa SQL/Cypher no argumento (o gpt-oss chegou a mandar `SELECT ... FROM Anime`)
+
+**Primeiros testes com o gpt-oss-20b** (4 perguntas, 8–23 s cada): escolhe bem a ferramenta, mas **completa de memória o que falta no resultado**:
+- inventou a ordem das temporadas de Attack on Titan (com anos errados) quando a ferramenta só trazia a sequência direta → a cadeia completa resolveu
+- inventou detalhes de enredo e duração → regra no prompt: anos, durações, episódios e enredo só se vierem das ferramentas
+- preencheu ano e episódios de nós esboço → os esboços agora vêm com um aviso explícito
+
+Lição: com modelo local, **lacuna no resultado da ferramenta vira alucinação**. Vale mais completar o resultado do que pedir no prompt para não inventar.
+
+O backend do Claude tem teste unitário com cliente falso, mas ainda não rodou de verdade (falta credencial).
+
 ## Pontos de atenção
 - `consulta_cypher`: validar a query antes de rodar e executar em **transação de leitura** (`session.execute_read`), que o servidor rejeita se houver escrita. Usuário somente leitura (RBAC) só existe no Neo4j Enterprise; estamos na Community
 - Limitar número de passos e tamanho do contexto retornado por ferramenta

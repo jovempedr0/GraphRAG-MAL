@@ -18,6 +18,8 @@ Voltar: [[00 - Índice GraphRAG Anime]]
     - [x] perguntas novas na avaliação (fora da nota 06): 6/12 → 12/12 com a checagem de valores; falta um lote guardado sem olhar
     - [ ] resumo e gráfico: o resumo fica para o agente; o gráfico foi adiado
 - [ ] 7. Agente com as três ferramentas (`consulta_cypher` reaproveita o gerador da etapa 6) → [[04 - Agente GraphRAG]]
+    - [x] v1: backends oMLX e Claude, três ferramentas, loop com limite de passos, CLI e log
+    - [ ] conjunto de perguntas para o agente e teste com o backend Claude
 - [ ] 8. Avaliação (abaixo)
 - [ ] 9. Expandir o crawl pelas recomendações
 
