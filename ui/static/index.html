@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GraphRAG Anime</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">GraphRAG <span>Anime</span></div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="chat" aria-selected="true">Chat</button>
+      <button role="tab" data-tab="analytics">Analytics</button>
+      <button role="tab" data-tab="grafo">Grafo</button>
+      <button role="tab" data-tab="avaliacao">Avaliação</button>
+    </nav>
+    <div class="status" id="status" title="Estado do grafo e do oMLX">carregando…</div>
+    <button class="icon" id="theme" title="Alternar tema" aria-label="Alternar tema">◐</button>
+  </header>
+
+  <!-- CHAT -->
+  <section class="panel" id="tab-chat">
+    <div class="chat-tools">
+      <label>Backend
+        <select id="backend">
+          <option value="omlx">Local (oMLX)</option>
+          <option value="anthropic">Claude</option>
+        </select>
+      </label>
+      <button id="new-chat" class="ghost">Nova conversa</button>
+    </div>
+    <div class="messages" id="messages">
+      <div class="empty" id="chat-empty">
+        <p>Pergunte sobre animes e mangás. O agente escolhe entre busca semântica, vizinhança no grafo e consulta Cypher.</p>
+        <div class="chips">
+          <button class="chip">Me indica algo parecido com Monster, mas mais curto</button>
+          <button class="chip">Em que ordem eu assisto Attack on Titan?</button>
+          <button class="chip">Quero um anime sobre luto e perda</button>
+          <button class="chip">Qual estúdio tem a maior nota média entre os que têm pelo menos 10 animes no top?</button>
+        </div>
+      </div>
+    </div>
+    <form class="composer" id="chat-form">
+      <textarea id="chat-input" rows="2" placeholder="Sua pergunta… (Enter envia, Shift+Enter quebra linha)"></textarea>
+      <button type="submit" id="chat-send">Enviar</button>
+    </form>
+  </section>
+
+  <!-- ANALYTICS -->
+  <section class="panel" id="tab-analytics" hidden>
+    <form class="row" id="cy-form">
+      <input id="cy-question" placeholder="Ex.: Como evoluiu a nota média dos animes do top por década?">
+      <button type="submit" id="cy-ask">Gerar e executar</button>
+    </form>
+    <div id="cy-meta" class="meta"></div>
+    <div id="cy-attempts"></div>
+    <div class="editor">
+      <div class="editor-head"><span>Cypher (editável)</span>
+        <button id="cy-run" class="ghost">Executar este Cypher</button></div>
+      <textarea id="cy-code" spellcheck="false" rows="7" placeholder="O Cypher gerado aparece aqui; você pode editar e executar de novo (só leitura)."></textarea>
+    </div>
+    <div class="results">
+      <div class="chart-wrap" id="cy-chart-wrap" hidden><canvas id="cy-chart"></canvas></div>
+      <div class="table-wrap" id="cy-table"></div>
+    </div>
+  </section>
+
+  <!-- GRAFO -->
+  <section class="panel graph-panel" id="tab-grafo" hidden>
+    <div class="graph-side">
+      <div class="search">
+        <input id="g-search" placeholder="Buscar título, estúdio ou autor…" autocomplete="off">
+        <ul id="g-results" class="dropdown" hidden></ul>
+      </div>
+      <div class="legend">
+        <span><i class="ln rec"></i>Recomenda</span>
+        <span><i class="ln rel"></i>Relacionado</span>
+        <span><i class="ln ada"></i>Adaptado de</span>
+        <span><i class="ln aut"></i>Estúdio / autor</span>
+        <span><i class="dot is-top"></i>Top</span>
+        <span><i class="dot is-sketch"></i>Esboço</span>
+      </div>
+      <div id="g-details" class="details"><p class="muted">Busque um título para ver a vizinhança. Clique num nó para navegar.</p></div>
+    </div>
+    <div id="g-canvas" class="graph-canvas"></div>
+  </section>
+
+  <!-- AVALIAÇÃO -->
+  <section class="panel" id="tab-avaliacao" hidden>
+    <div class="row">
+      <label>Tipo <select id="ev-filter"><option value="">Todos</option><option value="gerador">Gerador de Cypher</option><option value="agente">Agente</option></select></label>
+      <button id="ev-reload" class="ghost">Recarregar</button>
+    </div>
+    <div class="table-wrap" id="ev-runs"></div>
+    <div id="ev-detail"></div>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
