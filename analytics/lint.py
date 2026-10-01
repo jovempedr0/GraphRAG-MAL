@@ -33,13 +33,18 @@ def fix_undirected(cypher):
 def check_schema(cypher, schema):
     """Devolve a lista de problemas (texto para o modelo corrigir); vazia se estiver tudo certo."""
     text = strip_strings(cypher)
-    node_vars = {}
+    node_vars, rel_vars = variables(text)
+    return _check_directions(text, node_vars, schema) + _check_properties(text, node_vars, rel_vars, schema)
+
+
+def variables(text):
+    """Label de cada variável de nó e tipo de cada variável de relação (o primeiro que aparecer)."""
+    node_vars, rel_vars = {}, {}
     for var, label in NODE_VAR_LABEL.findall(text):
         node_vars.setdefault(var, label)
-    rel_vars = {}
     for var, rel_type in REL_VAR_TYPE.findall(text):
         rel_vars.setdefault(var, rel_type)
-    return _check_directions(text, node_vars, schema) + _check_properties(text, node_vars, rel_vars, schema)
+    return node_vars, rel_vars
 
 
 def _label(node_text, node_vars):

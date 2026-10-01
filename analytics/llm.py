@@ -11,7 +11,7 @@ MODEL_OPTIONS = {
 
 
 class ChatClient:
-    def __init__(self, base_url, api_key, model, max_tokens=2048, timeout=600.0, transport=None):
+    def __init__(self, base_url, api_key, model, max_tokens=4096, timeout=600.0, transport=None):
         self.model = model
         self.max_tokens = max_tokens
         self.options = MODEL_OPTIONS.get(model, {})

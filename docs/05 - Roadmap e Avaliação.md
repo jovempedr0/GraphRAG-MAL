@@ -15,7 +15,7 @@ Voltar: [[00 - Índice GraphRAG Anime]]
 - [ ] 6. Gerador de Cypher para analytics do grafo (pergunta → Cypher validado → tabela/resumo/gráfico) → [[07 - Gerador de Cypher]]
     - [x] schema do banco + convenções + exemplos, validação, checagens contra o schema, retry, CLI
     - [x] avaliação com 15 perguntas e escolha do modelo (gpt-oss-20b, 14/15)
-    - [ ] perguntas novas na avaliação (fora da nota 06), para medir generalização
+    - [x] perguntas novas na avaliação (fora da nota 06): 6/12 → 12/12 com a checagem de valores; falta um lote guardado sem olhar
     - [ ] resumo e gráfico: o resumo fica para o agente; o gráfico foi adiado
 - [ ] 7. Agente com as três ferramentas (`consulta_cypher` reaproveita o gerador da etapa 6) → [[04 - Agente GraphRAG]]
 - [ ] 8. Avaliação (abaixo)

@@ -5,16 +5,22 @@ from dataclasses import dataclass, field
 # O que a introspecção não mostra: semântica das arestas e cuidados com os dados.
 CONVENTIONS = """\
 - Nós com `completo = false` são esboços: só têm `mal_id` e `titulo`. Filtre `{completo: true}` sempre que a pergunta envolver nota, gênero, estúdio, ano ou episódios, ou falar em "top"
+- "Do top" quer dizer `completo = true` (os itens do ranking do MyAnimeList); não é um corte de nota. Não invente filtros que a pergunta não pede
+- `ORDER BY ... DESC` põe os nulos primeiro: ao ordenar por uma propriedade que pode faltar, filtre `IS NOT NULL`
 - `RECOMMENDS` está gravada num sentido só e não tem direção de significado: consulte sempre sem seta, `(a)-[r:RECOMMENDS]-(b)`
 - `votos` é propriedade da aresta `RECOMMENDS` (`r.votos`), não dos nós
 - `RELATED_TO` tem direção: `(a)-[:RELATED_TO {tipo: 'sequel'}]->(b)` significa "b é sequência de a"
 - `episodios` e `capitulos` nulos significam desconhecido (ainda em exibição/publicação)
 - `Genre` é identificado por `nome`, em inglês. Use só nomes da lista de gêneros abaixo
 - `nota` vai de 0 a 10; `ano` é o ano de estreia
-- Títulos (`titulo`) estão em romaji, como no MyAnimeList (ex.: 'Shingeki no Kyojin'); `titulo_en` é o título em inglês
+- Títulos (`titulo`) estão em romaji, como no MyAnimeList (ex.: 'Shingeki no Kyojin'); `titulo_en` é o título em inglês. Use o título exato; se a pergunta usar um nome popular (ex.: 'Frieren'), a validação devolve os títulos parecidos
+- Propriedades categóricas (`fonte`, `status`, `tipo`) usam valores em minúsculas do MyAnimeList (ex.: `tipo = 'movie'`); se o valor não existir, a validação devolve os válidos
 - Não retorne a propriedade `embedding` (vetor de 1024 números)"""
 
 SKIP_PROPERTIES = {"embedding", "embedding_modelo"}
+# Até esse número de valores distintos, a checagem de valores (values.py) sugere todos.
+# Listar esses valores no prompt piorou o gpt-oss em perguntas de caminho (E15, E16).
+MAX_CATEGORICAL = 20
 
 
 @dataclass
@@ -71,3 +77,4 @@ def build_schema(session):
         rel_props=rel_prop_names,
         patterns={(p["a"], p["t"], p["b"]) for p in patterns},
     )
+

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "N1",
+    "pergunta": "Qual estúdio tem a maior nota média entre os que têm pelo menos 10 animes no top?",
+    "cypher": "MATCH (a:Anime {completo: true})-[:PRODUCED_BY]->(s:Studio) WITH s, count(a) AS n, avg(a.nota) AS media WHERE n >= 10 RETURN s.nome, media ORDER BY media DESC LIMIT 1"
+  },
+  {
+    "id": "N2",
+    "pergunta": "Como evoluiu a nota média dos animes do top ano a ano, de 2018 em diante?",
+    "cypher": "MATCH (a:Anime {completo: true}) WHERE a.ano >= 2018 RETURN a.ano, avg(a.nota) AS media ORDER BY a.ano"
+  },
+  {
+    "id": "N3",
+    "pergunta": "Quantos animes do top são adaptações de light novel?",
+    "cypher": "MATCH (a:Anime {completo: true}) WHERE a.fonte = 'light_novel' RETURN count(a)"
+  },
+  {
+    "id": "N4",
+    "pergunta": "Quantos mangás do top ainda estão em publicação?",
+    "cypher": "MATCH (m:Manga {completo: true}) WHERE m.status = 'currently_publishing' RETURN count(m)"
+  },
+  {
+    "id": "N5",
+    "pergunta": "Quais filmes do top têm nota acima de 8,8?",
+    "cypher": "MATCH (a:Anime {completo: true}) WHERE a.tipo = 'movie' AND a.nota > 8.8 RETURN a.titulo ORDER BY a.nota DESC"
+  },
+  {
+    "id": "N6",
+    "pergunta": "Quais animes da MAPPA no top têm nota acima de 8,7?",
+    "cypher": "MATCH (a:Anime {completo: true})-[:PRODUCED_BY]->(:Studio {nome: 'MAPPA'}) WHERE a.nota > 8.7 RETURN a.titulo ORDER BY a.nota DESC"
+  },
+  {
+    "id": "N7",
+    "pergunta": "Quais animes são recomendados tanto para quem gostou de Death Note quanto para quem gostou de Code Geass: Hangyaku no Lelouch?",
+    "cypher": "MATCH (:Anime {titulo: 'Death Note'})-[:RECOMMENDS]-(o:Anime)-[:RECOMMENDS]-(:Anime {titulo: 'Code Geass: Hangyaku no Lelouch'}) RETURN DISTINCT o.titulo"
+  },
+  {
+    "id": "N8",
+    "pergunta": "Quais são os spin-offs de Gintama?",
+    "cypher": "MATCH (:Anime {titulo: 'Gintama'})-[:RELATED_TO {tipo: 'spin_off'}]->(s:Anime) RETURN s.titulo"
+  },
+  {
+    "id": "N9",
+    "pergunta": "Entre os animes recomendados para quem gostou de Steins;Gate, qual tem a maior nota?",
+    "cypher": "MATCH (:Anime {titulo: 'Steins;Gate'})-[:RECOMMENDS]-(o:Anime {completo: true}) RETURN o.titulo, o.nota ORDER BY o.nota DESC LIMIT 1"
+  },
+  {
+    "id": "N10",
+    "pergunta": "Quais são os 5 gêneros com maior nota média entre os animes do top, considerando só gêneros com pelo menos 20 animes?",
+    "cypher": "MATCH (a:Anime {completo: true})-[:HAS_GENRE]->(g:Genre) WITH g, count(a) AS n, avg(a.nota) AS media WHERE n >= 20 RETURN g.nome, media ORDER BY media DESC LIMIT 5"
+  },
+  {
+    "id": "N11",
+    "pergunta": "Qual mangá do top tem mais capítulos?",
+    "cypher": "MATCH (m:Manga {completo: true}) WHERE m.capitulos IS NOT NULL RETURN m.titulo, m.capitulos ORDER BY m.capitulos DESC LIMIT 1"
+  },
+  {
+    "id": "N12",
+    "pergunta": "Quantos animes do top têm pelo menos um gênero em comum com Frieren e também são recomendados junto com ele?",
+    "cypher": "MATCH (f:Anime {titulo: 'Sousou no Frieren'})-[:RECOMMENDS]-(o:Anime {completo: true}) WHERE EXISTS { (f)-[:HAS_GENRE]->(:Genre)<-[:HAS_GENRE]-(o) } RETURN count(DISTINCT o)"
+  }
+]

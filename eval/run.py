@@ -1,6 +1,7 @@
 """Avalia o gerador de Cypher com as perguntas de eval/questions.json.
 
     uv run --env-file config/.env python -m eval.run MODELO [MODELO ...] [--only E1,E8]
+        [--perguntas eval/questions_novas.json]
 
 Para cada modelo: gera o Cypher (com validação e retry), executa, compara com a referência
 e grava os detalhes em data/eval/<data>-<modelo>.jsonl.
@@ -65,10 +66,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("models", nargs="+")
     parser.add_argument("--only", help="ids separados por vírgula, ex.: E1,E8")
+    parser.add_argument("--perguntas", type=Path, default=QUESTIONS, help="arquivo de perguntas")
     args = parser.parse_args()
     logging.getLogger("neo4j.notifications").setLevel(logging.ERROR)
 
-    questions = json.loads(QUESTIONS.read_text())
+    questions = json.loads(args.perguntas.read_text())
     if args.only:
         wanted = set(args.only.split(","))
         questions = [q for q in questions if q["id"] in wanted]

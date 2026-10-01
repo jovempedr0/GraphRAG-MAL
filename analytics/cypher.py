@@ -5,6 +5,7 @@ from neo4j import unit_of_work
 from neo4j.exceptions import Neo4jError
 
 from analytics.lint import check_schema, fix_undirected, strip_strings
+from analytics.values import check_values
 
 DEFAULT_LIMIT = 100
 
@@ -78,7 +79,7 @@ def prepare_and_run(session, raw_text, schema, timeout=10.0, limit=DEFAULT_LIMIT
         raise CypherError("resposta vazia; devolva uma consulta Cypher")
     check_read_only(cypher)
     cypher = fix_undirected(cypher)
-    if problems := check_schema(cypher, schema):
+    if problems := check_schema(cypher, schema) or check_values(session, cypher, schema):
         raise CypherError("; ".join(problems))
     explain(session, cypher)
     cypher = ensure_limit(cypher, limit)

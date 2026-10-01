@@ -60,6 +60,10 @@ A extração (`extract_cypher`) tolera o que os modelos fazem na prática: bloco
 - **Resultado vazio**: pede uma revisão (uma vez só) com a dica de conferir direção e valores; se vier vazio de novo, aceita
 - Limite: variáveis sem label em lugar nenhum da consulta não são checadas
 
+**Checagem de valores** (`analytics/values.py`): um valor inexistente não gera erro no Neo4j, a consulta só volta vazia ou conta zero. Cada literal de igualdade (`{titulo: '...'}`, `x.status = '...'`, `x.nome IN [...]`) é procurado no banco; se não existir, o erro traz os parecidos:
+- títulos e nomes: busca pelo valor inteiro e depois por palavra, também no `titulo_en`, os mais populares primeiro ("Attack on Titan" → 'Shingeki no Kyojin'; "Frieren" → 'Sousou no Frieren')
+- categorias (até 20 valores distintos): lista todos os válidos ('Movie' → 'movie', 'ova', ...)
+
 ### 5. Autocorreção
 Se a validação ou a execução falhar, a mensagem de erro volta para o modelo, que gera uma nova versão. Máximo de 2 tentativas extras; todas ficam registradas no log.
 
@@ -136,6 +140,19 @@ uv run --env-file config/.env python -m analytics "qual estúdio tem a melhor no
 ```
 Mostra as tentativas que falharam, o Cypher e a tabela. Cada pergunta é registrada em `data/logs/analytics.jsonl` (modelo, pergunta, Cypher, tentativas com erro e tempo). O resumo em texto fica para o agente ([[04 - Agente GraphRAG]]).
 
+## Perguntas novas (2026-10-01)
+`eval/questions_novas.json`: 12 perguntas com padrões fora da nota 06 e dos exemplos do prompt (categorias, vizinhos em comum, `spin_off`, série por ano, top 1).
+
+| Modelo | Antigas (15) | Novas, 1ª rodada | Novas, após ajustes | Total após ajustes |
+|---|---|---|---|---|
+| **gpt-oss-20b** | 14/15 | 6/12 | **12/12** | **26/27 (96%)** |
+| Qwen3-14B | 11/15 | 6/12 | 9/12 | 20/27 (74%) |
+
+- A 1ª rodada confirmou que os 93% estavam inflados. Erros: valores categóricos chutados ('Light Novel', 'Ongoing', 'Movie'), nome popular no lugar do título ('Frieren'), filtro inventado (`nota > 8.5` para "do top", contaminação do exemplo do prompt) e nulos primeiro no `ORDER BY DESC`
+- Ajustes: checagem de valores, convenções sobre "do top" e nulos, comparação numérica com tolerância (8,635 × 8,64)
+- **Achado contraintuitivo:** listar os valores categóricos no prompt (como os gêneros) derrubou o gpt-oss em E15 e E16 (perguntas de caminho), de forma determinística nas 3 repetições. Sem a lista, as duas voltam a passar, e as perguntas de categoria passam na 2ª tentativa, com os valores vindos da checagem. Lição: **contexto a mais no prompt pode piorar**; erro + sugestão no retry custa menos
+- **Ressalva:** os ajustes foram feitos olhando os erros das perguntas novas, que agora também estão "contaminadas". Para medir generalização, falta um lote escrito por outra pessoa e guardado sem olhar
+
 ## Código
 | Arquivo | Papel |
 |---|---|
@@ -144,6 +161,7 @@ Mostra as tentativas que falharam, o Cypher e a tabela. Cada pergunta é registr
 | `analytics/llm.py` | cliente de chat do oMLX; desliga o raciocínio dos Qwen3 |
 | `analytics/cypher.py` | extração, bloqueio de escrita, `EXPLAIN`, `LIMIT`, execução de leitura com timeout |
 | `analytics/lint.py` | checagens contra o schema |
+| `analytics/values.py` | checagem dos valores literais no banco, com sugestões |
 | `analytics/generator.py` | laço de geração com retry e revisão de resultado vazio |
 | `analytics/evaluation.py` | comparação de resultados |
 
@@ -151,5 +169,5 @@ Mostra as tentativas que falharam, o Cypher e a tabela. Cada pergunta é registr
 - GDS ou Cypher puro para centralidade e comunidades?
 - Gráficos no terminal (ex.: `plotext`) ou exportar HTML? (adiado)
 - Quantos exemplos few-shot cabem antes de piorar (ou encarecer) a geração?
-- O gerador generaliza para perguntas fora da nota 06? (próximo passo: ~10 perguntas novas)
+- O gerador generaliza? Falta um lote de perguntas guardado sem olhar (as 12 novas já orientaram ajustes)
 - Vale um exemplo few-shot de caminho de tamanho variável? Os modelos pequenos erraram as cadeias (E15, E16)

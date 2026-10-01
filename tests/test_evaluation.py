@@ -9,9 +9,11 @@ def test_ignores_column_order_and_extra_columns():
     assert same_result([["Monster", 8.9]], [[74, 8.9, "Monster"]])
 
 
-def test_rounds_numbers_to_two_places():
+def test_numbers_compare_with_tolerance():
     assert same_result([["x", 8.46]], [["x", 8.4567]])
+    assert same_result([["Studio Pierrot", 8.635]], [["Studio Pierrot", 8.64]])
     assert same_result([[3]], [[3.0]])
+    assert not same_result([["x", 8.63]], [["x", 8.65]])
 
 
 def test_different_row_count_fails():
