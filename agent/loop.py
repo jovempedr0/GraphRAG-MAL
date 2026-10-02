@@ -50,12 +50,12 @@ class Result:
 class Agent:
     """Conversa com memória: cada pergunta continua o histórico do backend."""
 
-    def __init__(self, backend, tools, max_steps=MAX_STEPS, on_step=None):
+    def __init__(self, backend, tools, max_steps=MAX_STEPS, on_step=None, system=SYSTEM):
         self.backend = backend
         self.tools = tools
         self.max_steps = max_steps
         self.on_step = on_step  # callback(Step), para mostrar o progresso
-        backend.start(SYSTEM, list(tools.specs.values()))
+        backend.start(system, list(tools.specs.values()))
 
     def ask(self, question):
         self.backend.add_user(question)

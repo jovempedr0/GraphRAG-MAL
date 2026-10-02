@@ -267,8 +267,16 @@ def summarize(path):
                 "antigas" if all(i.startswith("E") for i in ids) else "misto")
     secs = sorted(r.get("segundos", 0) for r in rows) or [0]
     return {"nome": path.name, "tipo": "agente" if agent else "gerador", "conjunto": conjunto,
-            "modelo": rest.replace("agente-", ""), "quando": stamp, "acertos": ok, "total": len(rows),
+            "modelo": agent_model(rest) if agent else rest, "quando": stamp, "acertos": ok, "total": len(rows),
             "mediana_s": secs[len(secs) // 2]}
+
+
+def agent_model(rest):
+    """agente-gpt-oss… (GraphRAG, config C) ou agente-A-gpt-oss… / agente-B-… (só LLM, RAG vetorial)."""
+    rest = rest.removeprefix("agente-")
+    config, _, model = rest.partition("-")
+    names = {"A": "só LLM", "B": "RAG vetorial"}
+    return f"{model} · {names[config]}" if config in names else rest
 
 
 @app.get("/api/avaliacoes")

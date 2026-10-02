@@ -23,7 +23,8 @@ Voltar: [[00 - Índice GraphRAG Anime]]
     - [x] conjunto de 15 perguntas para o agente, com correção automática: 15/15 depois do crawl
     - [ ] teste com o backend Claude (falta credencial)
     - [x] interface web: chat, analytics, grafo e avaliações
-- [ ] 8. Avaliação (abaixo)
+- [x] 8. Avaliação A/B/C do agente: A (só LLM) 1/15, B (RAG vetorial) 5/15, C (GraphRAG) 15/15 → [[04 - Agente GraphRAG]]
+    - [ ] C com o backend Claude (falta credencial)
 - [x] 9. Expandir o crawl pelas recomendações → [[02 - Ingestão de Dados]]
 
 **Release v0.1.0 (2026-10-01):** primeira versão avaliada, publicada no GitHub (github.com/jovempedr0/GraphRAG-MAL).
@@ -42,6 +43,8 @@ Comparar as respostas do agente em três configurações:
 Critérios: relevância da recomendação, fatos corretos (nota, gênero), perguntas multi-hop, perguntas de filtro/agregação, custo e latência.
 
 Com o backend trocável do agente, a configuração C roda duas vezes: **modelo local (gpt-oss-20b) × Claude**.
+
+**Feito (2026-10-01), com o gpt-oss:** A 1/15, B 5/15, C 15/15, usando a correção automática da avaliação do agente. Detalhes e exemplos em [[04 - Agente GraphRAG]]. Falta o C com Claude.
 
 ## Registro de decisões
 - 2026-10-01: ingestão via API em vez de scraping
@@ -63,5 +66,6 @@ Com o backend trocável do agente, a configuração C roda duas vezes: **modelo 
 - 2026-10-01: `SEM_DADOS` no gerador, em vez de deixar o modelo trocar a informação pedida por outra propriedade
 - 2026-10-01: perguntas de interseção ("recomendado para X e Y") vão para `consulta_cypher`, porque `expandir_vizinhanca` corta em 15 recomendações
 - 2026-10-01: preferir consertos em código e no resultado das ferramentas a instruções no prompt; reavaliar sempre que o prompt mudar
+- 2026-10-01: A/B/C com o mesmo modelo e o prompt de C intocado; A e B trocam só o bloco das ferramentas
 - Pendente: convenção `fonte` × `ADAPTED_FROM` para "adaptado de X"
 - Pendente: GDS ou Cypher puro para centralidade/comunidades ([[07 - Gerador de Cypher]])

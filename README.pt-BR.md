@@ -154,6 +154,18 @@ Os resultados ficam em `data/eval/*.jsonl` e aparecem na aba **Avaliação** da 
 | Gerador de Cypher | **24/27** (13/15 no primeiro conjunto, 11/12 no segundo) | ~8 s |
 | Agente | **15/15**; ferramenta certa 15/15; **0 respostas com nota sem fonte** | ~10 s |
 
+**O grafo ajuda? Mesmo modelo e mesmas perguntas, com ferramentas diferentes**
+
+| Config | Ferramentas | Passou | Respostas com nota sem fonte |
+|---|---|---|---|
+| A, só LLM | nenhuma | 1/15 | 12/15 |
+| B, RAG vetorial | só `busca_semantica` | 5/15 | 0/15 |
+| **C, GraphRAG** | as três | **15/15** | **0/15** |
+
+- **A** sabe o assunto e inventa os números. Inventou a bilheteria do filme de Chainsaw Man com uma fonte falsa, deu a Frieren 12 episódios e nota 8,0 (no grafo: 28 e 9,25) e pôs Berserk entre os mangás "sem anime". Mesmo com 16 mil tokens de saída, o gpt-oss às vezes raciocinou até o limite e não respondeu nada.
+- **B** é honesto, mas não acha título pela sinopse ("parecido com Monster" trouxe *Gogo Monster*). Sem as arestas, não responde sobre autor, ordem de temporadas, interseções nem filtros.
+- Para rodar: `python -m eval.agent_run --config A|B|C` (A com `--max-tokens 16384`). C usa o prompt do agente sem mudança.
+
 **Comparação de modelos no gerador de Cypher (antes do crawl)**
 
 | Modelo (local, oMLX) | Acertos (27 perguntas) | Mediana |

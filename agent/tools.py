@@ -97,12 +97,13 @@ def to_text(result):
 
 
 class Tools:
-    def __init__(self, session, embedder, cypher_chat, schema):
+    def __init__(self, session, embedder, cypher_chat, schema, only=None):
         self.session = session
         self.embedder = embedder
         self.cypher_chat = cypher_chat
         self.schema = schema
-        self.specs = {s["name"]: s for s in SPECS}
+        # only: subconjunto das ferramentas (avaliação A/B/C); None = todas
+        self.specs = {s["name"]: s for s in SPECS if only is None or s["name"] in only}
 
     def call(self, name, args):
         """Executa e devolve (texto do resultado, é_erro)."""

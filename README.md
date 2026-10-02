@@ -159,6 +159,18 @@ Results are written to `data/eval/*.jsonl` and shown in the **Avaliação** tab 
 | Cypher generator | **24/27** (13/15 first set, 11/12 second set) | ~8 s |
 | Agent | **15/15**; right tool 15/15; **0 answers with an ungrounded score** | ~10 s |
 
+**Does the graph help? Same model, same questions, different tools**
+
+| Config | Tools | Passed | Answers quoting an ungrounded score |
+|---|---|---|---|
+| A, LLM only | none | 1/15 | 12/15 |
+| B, vector RAG | `busca_semantica` only | 5/15 | 0/15 |
+| **C, GraphRAG** | all three | **15/15** | **0/15** |
+
+- **A** knows the topic but invents the numbers. It made up a box-office figure for the Chainsaw Man movie and cited a fake source, gave Frieren 12 episodes and an 8.0 score (the graph has 28 and 9.25), and listed Berserk among manga "without an anime". Even with a 16k output budget, gpt-oss sometimes reasoned until the limit and returned nothing.
+- **B** stays honest but cannot find titles by synopsis ("similar to Monster" returned *Gogo Monster*). Without the edges, it cannot answer questions about authors, season order, intersections or filters.
+- Run with `python -m eval.agent_run --config A|B|C` (A with `--max-tokens 16384`). C uses the agent's prompt unchanged.
+
 **Model comparison for the Cypher generator (before the crawl)**
 
 | Model (local, oMLX) | Correct (27 questions) | Median |

@@ -87,6 +87,25 @@ Correção **automática**, sem LLM como juiz. Uma resposta passa se:
 - **Interseção (A7, "recomendado para Death Note e para Code Geass"):** antes do crawl, o agente chamava `expandir_vizinhanca` duas vezes e cruzava as listas. Com o grafo maior, cada título tem dezenas de recomendações, o corte em 15 escondia a maior parte da interseção e a resposta saía incompleta sem aviso. Duas mudanças: o aviso `recomendacoes_obs` no resultado e a orientação no prompt de mandar "o que X e Y têm em comum" para `consulta_cypher`. Agora a A7 acerta 18/18
 - **Token do gpt-oss vazando no nome da ferramenta (A10):** numa chamada, o nome veio como `consulta_cypher<|channel|>commentary`, um pedaço do formato *harmony* do gpt-oss que o oMLX não separou. O loop devolveu erro de ferramenta desconhecida e o modelo repetiu a chamada com o nome certo, então a pergunta passou. Agora o `OmlxBackend` corta o nome no `<|` antes de procurar a ferramenta (`tool_name`). Na mesma pergunta, a primeira chamada mandou Cypher com propriedades em inglês (`a.genres`, `a.episodes`), que a ferramenta recusou
 
+## A/B/C: o grafo ajuda? (2026-10-01)
+Mesmo modelo (gpt-oss-20b), mesmo loop, mesmas 15 perguntas; muda o que o agente pode consultar:
+```
+uv run --env-file config/.env python -m eval.agent_run --config A --max-tokens 16384
+uv run --env-file config/.env python -m eval.agent_run --config B
+uv run --env-file config/.env python -m eval.agent_run --config C
+```
+| Config | Ferramentas | Passou | Cobertura + texto (ignorando notas sem fonte) | Com notas sem fonte | Mediana |
+|---|---|---|---|---|---|
+| A, só LLM | nenhuma | 1/15 | 6/15 | 12/15 | 18 s |
+| B, RAG vetorial | `busca_semantica` | 5/15 | 5/15 | 0/15 | 9 s |
+| **C, GraphRAG** | as três | **15/15** | **15/15** | **0/15** | 10 s |
+
+- O prompt de C é o do agente, sem mudança; A e B reaproveitam a introdução e as regras de resposta e trocam só o bloco das ferramentas. Em A e B, pergunta que pede uma ferramenta indisponível não reprova pelo critério de ferramenta
+- **A sabe o assunto e inventa os números.** Lembra títulos plausíveis (Psycho-Pass e Erased para Monster; Ichigo em Bleach), mas: bilheteria de Chainsaw Man inventada com **fonte falsa** ("Box Office Mojo, 28/10/2023"); Frieren com 12 episódios e nota 8,0 (no grafo: 28 e 9,25); a mesma nota 8,58 para todas as temporadas de Attack on Titan; Berserk entre os mangás "sem anime"
+- **A precisa de mais orçamento de saída.** Com os 4.096 tokens padrão, 5 respostas vieram vazias: o gpt-oss gastou tudo raciocinando. Com `--max-tokens 16384`, 3 voltaram; A10 e A14 seguem vazias, levando ~4 min cada. A tabela usa a rodada com 16k (com 4.096: 0/15)
+- **B é honesto e cego para o que não está na sinopse.** Não cita nenhuma nota sem fonte, mas a busca vetorial não acha título: "parecido com Monster" virou *Gogo Monster* e *Love♥Monster*; "Frieren" pegou outra obra (nota 7,36, dita com segurança porque veio da ferramenta). Sem relações, não responde autor, ordem de temporadas, interseções nem filtros. Passou só em assunto, sinopse e perguntas sem resposta
+- Ressalva: o conjunto foi escrito para o agente com grafo (as referências saem de Cypher), e é uma rodada só. A diferença é grande demais para ser ruído, mas o número exato de A e B não deve ser lido como absoluto
+
 ## Pontos de atenção
 - `consulta_cypher`: validar a query antes de rodar e executar em **transação de leitura** (`session.execute_read`), que o servidor rejeita se houver escrita. Usuário somente leitura (RBAC) só existe no Neo4j Enterprise; estamos na Community
 - Limitar número de passos e tamanho do contexto retornado por ferramenta

@@ -6,7 +6,7 @@ import pytest
 
 from agent.backends import AnthropicBackend, OmlxBackend, ToolCall, Turn
 from agent.loop import FINAL_NUDGE, Agent
-from agent.tools import SPECS, ToolError, to_text, validate
+from agent.tools import SPECS, ToolError, Tools, to_text, validate
 
 SPEC = {s["name"]: s for s in SPECS}
 
@@ -235,3 +235,23 @@ def test_omlx_tool_name_drops_leaked_harmony_tokens():
     b.start("s", [])
     b.add_user("q")
     assert b.step().calls[0].name == "consulta_cypher"
+
+
+def test_omlx_without_tools_omits_tool_fields():
+    bodies = []
+
+    def handler(request):
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"finish_reason": "stop",
+                                                      "message": {"content": "oi"}}]})
+    b = OmlxBackend("http://t/v1", "k", "m", transport=httpx.MockTransport(handler))
+    b.start("s", [])
+    b.add_user("q")
+    assert b.step().text == "oi"
+    assert "tools" not in bodies[0] and "tool_choice" not in bodies[0]
+
+
+def test_tools_subset():
+    tools = Tools(None, None, None, None, only=["busca_semantica"])
+    assert list(tools.specs) == ["busca_semantica"]
+    assert tools.call("consulta_cypher", {"pergunta": "x"}) == ("ferramenta desconhecida: consulta_cypher", True)

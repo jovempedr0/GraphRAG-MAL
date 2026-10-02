@@ -52,3 +52,23 @@ def test_grade_fraction_and_must_contain():
     q = {"ferramentas": [], "min_esperados": 0.5, "deve_conter": ["9.25"]}
     g = grade(q, "Frieren tem nota 9,25. Indico A.", [step("x", "9.25")], [["A"], ["B"], ["C"], ["D"]])
     assert not g["cobertura_ok"] and g["minimo"] == 2 and g["conteudo_ok"]
+
+
+def test_grade_tool_criterion_not_applicable_without_expected_tools():
+    # Configuração B (só busca_semantica) numa pergunta que pede consulta_cypher: não reprova pela ferramenta
+    q = {"ferramentas": ["consulta_cypher"]}
+    g = grade(q, "Não sei.", [step("busca_semantica")], [], available=["busca_semantica"])
+    assert g["ferramenta_ok"] is None and g["passou"] and g["conteudo_passou"]
+
+
+def test_grade_tool_criterion_applies_when_an_expected_tool_is_available():
+    q = {"ferramentas": ["consulta_cypher", "busca_semantica"]}
+    g = grade(q, "Resposta.", [], [], available=["busca_semantica"])
+    assert g["ferramenta_ok"] is False and not g["passou"] and g["conteudo_passou"]
+
+
+def test_grade_llm_only_numbers_are_ungrounded():
+    q = {"ferramentas": ["expandir_vizinhanca"], "deve_conter": ["9.25"]}
+    g = grade(q, "Frieren tem nota 9,25.", [], [], available=[])
+    assert g["ferramenta_ok"] is None and g["conteudo_ok"] and g["notas_sem_fonte"] == ["9.25"]
+    assert not g["passou"]

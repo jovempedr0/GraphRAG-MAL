@@ -63,8 +63,9 @@ class OmlxBackend:
 
     def step(self, allow_tools=True):
         body = {"model": self.model, "messages": self.messages, "temperature": 0,
-                "max_tokens": self.max_tokens, "tools": self.tools,
-                "tool_choice": "auto" if allow_tools else "none"}
+                "max_tokens": self.max_tokens}
+        if self.tools:  # sem ferramentas (avaliação "só LLM"), tool_choice não faz sentido
+            body |= {"tools": self.tools, "tool_choice": "auto" if allow_tools else "none"}
         resp = self._http.post("/chat/completions", json=body)
         resp.raise_for_status()
         data = resp.json()
@@ -128,12 +129,13 @@ class AnthropicBackend:
         self.messages.append({"role": "user", "content": text})
 
     def step(self, allow_tools=True):
+        tool_args = {"tools": self.tools,
+                     "tool_choice": {"type": "auto"} if allow_tools else {"type": "none"}} if self.tools else {}
         response = self.client.beta.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
             system=self.system,
-            tools=self.tools,
-            tool_choice={"type": "auto"} if allow_tools else {"type": "none"},
+            **tool_args,
             messages=self.messages,
             output_config={"effort": self.effort},
             # Recusa dos classificadores de segurança: refaz no modelo recomendado pela Anthropic.
