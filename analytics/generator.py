@@ -3,7 +3,7 @@ import time
 from dataclasses import dataclass, field
 
 from analytics.cypher import CypherError, prepare_and_run
-from analytics.prompt import build_messages, empty_result_message, retry_message
+from analytics.prompt import NO_DATA, build_messages, empty_result_message, retry_message
 
 MAX_RETRIES = 2
 EMPTY = "0 linhas"
@@ -24,6 +24,7 @@ class Answer:
     rows: list = field(default_factory=list)
     attempts: list = field(default_factory=list)
     tokens: int = 0
+    no_data: str | None = None  # o modelo disse que o grafo não tem a informação (e o quê falta)
 
     @property
     def ok(self):
@@ -40,6 +41,10 @@ def generate(question, chat, session, schema, max_retries=MAX_RETRIES):
         start = time.perf_counter()
         raw, usage = chat.complete(messages)
         answer.tokens += usage.get("total_tokens", 0)
+        if (reason := no_data_reason(raw)) is not None:
+            answer.attempts.append(Attempt(raw, None, time.perf_counter() - start))
+            answer.no_data = reason
+            break
         try:
             cypher, columns, rows = prepare_and_run(session, raw, schema)
         except CypherError as e:
@@ -57,3 +62,13 @@ def generate(question, chat, session, schema, max_retries=MAX_RETRIES):
                      {"role": "user", "content": empty_result_message()}]
         empty_hint_sent = True
     return answer
+
+
+def no_data_reason(raw):
+    """Motivo após SEM_DADOS, se a resposta do modelo for só isso (com ou sem bloco de código)."""
+    text = raw.strip().strip("`").strip()
+    if text.lower().startswith("cypher"):
+        text = text[6:].strip()
+    if not text.startswith(NO_DATA):
+        return None
+    return text[len(NO_DATA):].lstrip(" :").strip() or "o grafo não tem essa informação"

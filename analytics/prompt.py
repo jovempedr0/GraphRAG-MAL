@@ -1,5 +1,9 @@
 """Mensagens para o modelo: instruções, schema e exemplos (few-shot)."""
 
+# Resposta do modelo quando o grafo não tem a informação pedida. Sem isso, o modelo trocava
+# o dado por outro com o nome pedido (`a.popularidade AS bilheteria`).
+NO_DATA = "SEM_DADOS"
+
 SYSTEM = """\
 Você traduz perguntas sobre um grafo de animes e mangás do MyAnimeList (Neo4j) em uma única consulta Cypher de leitura.
 
@@ -8,6 +12,7 @@ Regras:
 - Só leitura: nada de CREATE, MERGE, SET, DELETE, REMOVE ou procedures de escrita
 - Dê nomes claros às colunas com AS
 - Responda só com a consulta, dentro de um bloco ```cypher```, sem explicação
+- Se a pergunta pede uma informação que o schema não tem (bilheteria, orçamento, personagens, episódios), não troque por outra propriedade: responda só `SEM_DADOS: <o que falta>`
 
 {schema}"""
 
@@ -53,14 +58,19 @@ ORDER BY n DESC LIMIT 5""",
 WHERE NOT EXISTS { (a)-[:RELATED_TO {tipo: 'sequel'}]->() }
 RETURN count(a) AS n""",
     ),
+    (
+        "Qual foi o orçamento de produção de Steins;Gate?",
+        f"{NO_DATA}: o grafo não tem orçamento de produção",
+    ),
 ]
 
 
 def build_messages(schema, question, examples=EXAMPLES):
     messages = [{"role": "system", "content": SYSTEM.format(schema=schema)}]
-    for q, cypher in examples:
+    for q, answer in examples:
         messages.append({"role": "user", "content": q})
-        messages.append({"role": "assistant", "content": f"```cypher\n{cypher}\n```"})
+        content = answer if answer.startswith(NO_DATA) else f"```cypher\n{answer}\n```"
+        messages.append({"role": "assistant", "content": content})
     messages.append({"role": "user", "content": question})
     return messages
 

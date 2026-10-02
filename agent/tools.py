@@ -189,6 +189,11 @@ class Tools:
         if not info["completo"]:
             info["obs"] = "nó esboço (fora do top): só título e conexões, sem nota nem gêneros"
 
+        total_rec = self.session.run(f"MATCH (:{label} {{mal_id: $id}})-[r:RECOMMENDS]-() RETURN count(r)",
+                                     id=node_id).single()[0]
+        if total_rec > 15:
+            info["recomendacoes_obs"] = (f"mostrando as 15 com mais votos de {total_rec}; para cruzar listas "
+                                         "(ex.: recomendados para X e para Y) use consulta_cypher")
         info["recomendacoes"] = self.session.run(f"""
             MATCH (n:{label} {{mal_id: $id}})-[r:RECOMMENDS]-(o)
             RETURN o.titulo AS titulo, o.mal_id AS mal_id, r.votos AS votos, o.nota AS nota,
@@ -233,6 +238,9 @@ class Tools:
 
     def consulta_cypher(self, pergunta):
         ans = generate(pergunta, self.cypher_chat, self.session, self.schema)
+        if ans.no_data:
+            return {"sem_dados": ans.no_data,
+                    "obs": "o grafo não tem essa informação; diga isso na resposta, sem trocar por outro dado"}
         if not ans.ok:
             errors = [a.error for a in ans.attempts if a.error]
             raise ToolError(f"não consegui gerar uma consulta válida. Erros: {to_text(errors)}")

@@ -2,7 +2,7 @@
   {
     "id": "E1",
     "pergunta": "Quais são os 10 animes com maior nota?",
-    "cypher": "MATCH (a:Anime {completo: true}) RETURN a.titulo, a.nota ORDER BY a.nota DESC LIMIT 10"
+    "cypher": "MATCH (a:Anime {completo: true}) WHERE a.nota IS NOT NULL RETURN a.titulo, a.nota ORDER BY a.nota DESC LIMIT 10"
   },
   {
     "id": "E3",
@@ -61,8 +61,8 @@
   },
   {
     "id": "E14",
-    "pergunta": "Quais animes fora do top têm 9 ou mais conexões de recomendação?",
-    "cypher": "MATCH (s:Anime {top: false}) WITH s, COUNT { (s)-[:RECOMMENDS]-() } AS grau WHERE grau >= 9 RETURN s.titulo, grau ORDER BY grau DESC"
+    "pergunta": "Quais animes fora do top têm 40 ou mais conexões de recomendação?",
+    "cypher": "MATCH (s:Anime {top: false}) WITH s, COUNT { (s)-[:RECOMMENDS]-() } AS grau WHERE grau >= 40 RETURN s.titulo, grau ORDER BY grau DESC"
   },
   {
     "id": "E15",

@@ -45,6 +45,8 @@ CLI  ·  interface web (ui/)  ·  avaliação automática (eval/)
 
 Quando alguma checagem falha, o erro volta para o modelo corrigir.
 
+Se a pergunta pede algo que o grafo não guarda (bilheteria, personagens, episódios filler), o gerador responde `SEM_DADOS` em vez de escrever uma consulta. Sem essa regra, o gpt-oss chegou a responder uma pergunta sobre bilheteria com `RETURN a.popularidade AS bilheteria`: a posição no ranking de popularidade, numa coluna chamada "bilheteria".
+
 ## Stack
 
 | Camada | Escolha |
@@ -96,6 +98,15 @@ $R python -m ingest.adapt --buscar              # ADAPTED_FROM; depois: load e a
 - **`top` e `completo` são coisas diferentes.** `top` marca os 500 do ranking. `completo` diz se o nó tem os detalhes. Obras citadas por recomendações ou relações entram como **esboço** (`completo = false`), só com o título, até serem coletadas pelo `ingest.crawl`.
 - **`ADAPTED_FROM` vem de casamento de títulos.** A API do MAL não traz a relação anime → mangá, então o vínculo é feito pelo título japonês, romaji ou inglês. O tipo da fonte desempata os candidatos, e a relação se propaga pela cadeia de sequências.
 
+**Grafo atual (2026-10-01)**, depois de um crawl da fronteira e de uma segunda rodada para os esboços mais conectados:
+
+| | Anime | Mangá |
+|---|---|---|
+| Com todos os detalhes (`completo`) | 2.954 (500 `top`) | 2.735 (500 `top`) |
+| Esboços | 4.312 | 3.594 |
+
+23.757 `RECOMMENDS`, 7.664 `RELATED_TO`, 892 `ADAPTED_FROM`, 2.861 autores, 346 estúdios e 80 gêneros.
+
 ## Uso
 
 **Agente no terminal**
@@ -136,7 +147,14 @@ $R python -m eval.agent_run [--only A1,A4]
 
 Os resultados ficam em `data/eval/*.jsonl` e aparecem na aba **Avaliação** da interface.
 
-**Resultados do gerador (antes do crawl, 2026-10-01)**
+**Resultados atuais (gpt-oss-20b, depois do crawl, 2026-10-01)**
+
+| Avaliação | Resultado | Mediana |
+|---|---|---|
+| Gerador de Cypher | **24/27** (13/15 no primeiro conjunto, 11/12 no segundo) | ~8 s |
+| Agente | **15/15**; ferramenta certa 15/15; **0 respostas com nota sem fonte** | ~10 s |
+
+**Comparação de modelos no gerador de Cypher (antes do crawl)**
 
 | Modelo (local, oMLX) | Acertos (27 perguntas) | Mediana |
 |---|---|---|
@@ -147,7 +165,12 @@ Os resultados ficam em `data/eval/*.jsonl` e aparecem na aba **Avaliação** da 
 
 ¹ avaliados só nas 15 perguntas antigas.
 
-O que mais ajudou foi corrigir no código, e não no prompt: as checagens contra o schema e contra os valores do banco. Listar os valores categóricos no prompt chegou a **piorar** o gpt-oss. Os detalhes estão em `docs/07 - Gerador de Cypher.md`.
+O que as avaliações ensinaram:
+- **Corrigir no código ajudou mais do que mexer no prompt.** As checagens contra o schema e contra os valores do banco fizeram a diferença. Listar os valores categóricos no prompt chegou a **piorar** o gpt-oss.
+- **Os resultados oscilam com mudanças pequenas no prompt.** A regra do `SEM_DADOS` corrigiu uma pergunta e quebrou outra: a E16, da cadeia de sequências, é a mais sensível. São rodadas únicas com temperatura 0, e uma pergunta vale de 4 a 7 pontos.
+- **Mais dados também mudam as perguntas.** Depois do crawl, algumas referências quebraram: animes que ainda não estrearam, sem nota, foram para o topo da ordenação, e um limiar ficou baixo demais. A lista das 15 recomendações com mais votos deixou de responder "recomendados para X e para Y ao mesmo tempo", e essas perguntas passaram a ir para `consulta_cypher`.
+
+Os detalhes estão em `docs/07 - Gerador de Cypher.md` e `docs/04 - Agente GraphRAG.md`.
 
 ## Estrutura
 
@@ -166,7 +189,7 @@ data/        cache da API, estado, logs e resultados (fora do git)
 ## Limitações conhecidas
 
 - Os dados vêm só do top 500 e da vizinhança coletada. Obras fora disso aparecem como esboço, sem nota nem gêneros.
-- `ADAPTED_FROM` é heurístico: pode faltar adaptação, e casos raros podem casar errado.
+- `ADAPTED_FROM` é heurístico: pode faltar adaptação, e casos raros podem casar errado. "Adaptado de light novel" pode ser respondido pela propriedade `fonte` do anime ou pelo `ADAPTED_FROM`, e os dois dão contagens diferentes (55 contra 42 no top 500).
 - A busca vetorial com o BGE-M3 dá scores muito próximos entre si (0,72–0,79). Só a ordem do ranking tem valor.
 - Os modelos locais tendem a completar de memória quando falta dado no resultado da ferramenta. O que mais ajudou foi completar o resultado da ferramenta, mais do que reforçar instruções no prompt.
 - O backend do Claude tem testes unitários com cliente falso, mas ainda não foi rodado com credencial real.

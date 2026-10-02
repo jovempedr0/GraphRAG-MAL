@@ -70,3 +70,28 @@ def test_gives_up_after_max_retries(run_with):
     ans, chat = run_with(["e1", "e2", "e3"], ["q1", "q2", "q3"])
     assert not ans.ok
     assert len(chat.calls) == 3
+
+
+def test_no_data_stops_without_running(run_with):
+    ans, chat = run_with([], ["SEM_DADOS: o grafo não tem bilheteria"])
+    assert ans.no_data == "o grafo não tem bilheteria"
+    assert not ans.ok and len(chat.calls) == 1
+
+
+@pytest.mark.parametrize("raw, reason", [
+    ("SEM_DADOS: falta orçamento", "falta orçamento"),
+    ("```\nSEM_DADOS: falta orçamento\n```", "falta orçamento"),
+    ("```cypher\nSEM_DADOS\n```", "o grafo não tem essa informação"),
+    ("MATCH (a) RETURN a", None),
+    ("MATCH (a) RETURN 'SEM_DADOS'", None),
+])
+def test_no_data_reason(raw, reason):
+    assert generator.no_data_reason(raw) == reason
+
+
+def test_no_data_example_is_not_wrapped_in_code_block():
+    from analytics.prompt import build_messages
+    msgs = build_messages("schema", "pergunta")
+    assistant = [m["content"] for m in msgs if m["role"] == "assistant"]
+    assert any(a.startswith("SEM_DADOS") for a in assistant)
+    assert all(a.startswith("```cypher") or a.startswith("SEM_DADOS") for a in assistant)

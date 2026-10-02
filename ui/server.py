@@ -170,7 +170,7 @@ def cypher_from_question(body: PerguntaIn):
     with state["driver"].session() as s:
         ans = generate(body.pergunta, state["cypher_chat"], s, state["schema"])
     return as_json({
-        "ok": ans.ok, "cypher": ans.cypher, "colunas": ans.columns, "linhas": ans.rows[:MAX_ROWS],
+        "ok": ans.ok, "sem_dados": ans.no_data, "cypher": ans.cypher, "colunas": ans.columns, "linhas": ans.rows[:MAX_ROWS],
         "total_linhas": len(ans.rows), "tokens": ans.tokens, "segundos": round(time.perf_counter() - start, 1),
         "modelo": state["cypher_chat"].model,
         "tentativas": [{"resposta": a.raw, "erro": a.error, "segundos": round(a.seconds, 1)}

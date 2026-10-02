@@ -218,12 +218,15 @@ $("#cy-form").addEventListener("submit", async (e) => {
   $("#cy-attempts").innerHTML = "";
   try {
     const r = await api("/api/cypher", { method: "POST", body: { pergunta: q } });
-    $("#cy-meta").textContent = r.ok
+    $("#cy-meta").textContent = r.sem_dados
+      ? `O grafo não tem essa informação: ${r.sem_dados}`
+      : r.ok
       ? `${r.modelo} · ${r.tentativas.length} tentativa(s) · ${r.segundos}s · ${r.total_linhas} linhas`
       : `não consegui gerar uma consulta válida (${r.tentativas.length} tentativas)`;
     $("#cy-attempts").innerHTML = r.tentativas.filter((t) => t.erro).map((t, i) =>
       `<div class="attempt"><b>Tentativa ${i + 1}:</b> ${esc(t.erro)}<details><summary>resposta do modelo</summary><pre>${esc(t.resposta)}</pre></details></div>`).join("");
-    if (!r.ok) $("#cy-code").value = r.tentativas.at(-1)?.resposta || "";
+    if (r.sem_dados) { $("#cy-code").value = ""; $("#cy-table").innerHTML = ""; drawChart(null); }
+    else if (!r.ok) $("#cy-code").value = r.tentativas.at(-1)?.resposta || "";
     else showResult(r);
   } catch (err) { $("#cy-meta").innerHTML = `<span class="fail">${esc(err.message)}</span>`; }
   finally { $("#cy-ask").disabled = false; }

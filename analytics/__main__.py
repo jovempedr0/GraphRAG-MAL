@@ -30,6 +30,9 @@ def main():
     with driver, driver.session() as session:
         ans = generate(question, chat, session, build_schema(session))
 
+    if ans.no_data:
+        print(f"O grafo não tem essa informação: {ans.no_data}")
+        return
     for i, a in enumerate(ans.attempts, 1):
         if a.error:
             print(f"tentativa {i} falhou ({a.seconds:.1f}s): {a.error}\n")

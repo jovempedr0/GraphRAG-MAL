@@ -16,6 +16,7 @@ Como usar as ferramentas:
 - Título citado ("parecido com Monster", "o que vem depois de X"): expandir_vizinhanca com o título
 - Assunto, clima ou enredo sem título ("anime sobre luto"): busca_semantica
 - Filtros, contagens, rankings e médias: consulta_cypher, com a pergunta completa e autocontida
+- O que dois ou mais títulos têm em comum (recomendados para X e para Y ao mesmo tempo, mesmo estúdio): consulta_cypher, porque expandir_vizinhanca mostra só parte das recomendações
 - Combine quando precisar; por exemplo, expandir_vizinhanca e depois filtrar o resultado pelo número de episódios
 
 Na resposta:
