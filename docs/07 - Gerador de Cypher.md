@@ -37,7 +37,8 @@ Transformar uma pergunta em linguagem natural numa consulta Cypher, executar e d
   - `RELATED_TO`: `(a)-[:RELATED_TO {tipo}]->(b)` = "b é `tipo` de a"
   - `episodios`/`capitulos` nulos = desconhecido
   - `Genre` é chaveado por `nome`
-- **Valores válidos:** a lista de gêneros (76) e de tipos de `RELATED_TO`, para o modelo não inventar `'Terror'` quando o valor real é `'Horror'`
+  - "do top" = `{top: true}`, "fora do top" = `{top: false}` (propriedade separada de `completo` desde o crawl)
+- **Valores válidos não vão no prompt.** A ideia era listar gêneros e tipos para o modelo não inventar `'Terror'` no lugar de `'Horror'`, mas a lista piorou o gpt-oss (ver *Perguntas novas*). Os valores chegam pela checagem de valores, no retry
 
 ### 2. Exemplos (few-shot)
 Pares pergunta → Cypher tirados de [[06 - Consultas Cypher]], escolhidos para cobrir agregação, `WITH`, `COUNT {}`, `EXISTS {}`, caminhos de tamanho variável e `shortestPath`.
@@ -66,6 +67,9 @@ A extração (`extract_cypher`) tolera o que os modelos fazem na prática: bloco
 
 ### 5. Autocorreção
 Se a validação ou a execução falhar, a mensagem de erro volta para o modelo, que gera uma nova versão. Máximo de 2 tentativas extras; todas ficam registradas no log.
+
+### 5b. `SEM_DADOS`
+Se a pergunta pede algo que o grafo não guarda (bilheteria, orçamento, personagens, episódios fillers), o modelo responde só `SEM_DADOS: <o que falta>` em vez de Cypher. O gerador para ali e devolve `no_data` com o motivo; a CLI, a interface e a ferramenta `consulta_cypher` do agente mostram a mensagem. Há um exemplo few-shot ("orçamento de Steins;Gate").
 
 ### 6. Saída
 - Tabela com o resultado
@@ -153,16 +157,39 @@ Mostra as tentativas que falharam, o Cypher e a tabela. Cada pergunta é registr
 - **Achado contraintuitivo:** listar os valores categóricos no prompt (como os gêneros) derrubou o gpt-oss em E15 e E16 (perguntas de caminho), de forma determinística nas 3 repetições. Sem a lista, as duas voltam a passar, e as perguntas de categoria passam na 2ª tentativa, com os valores vindos da checagem. Lição: **contexto a mais no prompt pode piorar**; erro + sugestão no retry custa menos
 - **Ressalva:** os ajustes foram feitos olhando os erros das perguntas novas, que agora também estão "contaminadas". Para medir generalização, falta um lote escrito por outra pessoa e guardado sem olhar
 
+## Depois do crawl (2026-10-01)
+O grafo passou de ~1.000 para ~13.600 nós de obra (2.954 animes e 2.735 mangás completos) e ganhou `ADAPTED_FROM`. Com os mesmos prompts:
+
+| | Antes do crawl | Depois do crawl |
+|---|---|---|
+| Antigas (15) | 14/15 | **13/15** (E12, E16) |
+| Novas (12) | 12/12 | **11/12** (N3) |
+| Total | 26/27 | **24/27 (89%)**, mediana ~8 s |
+
+**Referências que o crawl quebrou** (o erro estava na referência, não no modelo):
+- **E1** (maiores notas): animes ainda não lançados, com `nota` nula, passaram a vir primeiro no `ORDER BY DESC`. A referência ganhou `WHERE a.nota IS NOT NULL`
+- **E14** (esboços mais conectados): com milhares de nós novos, o limiar ficou baixo demais e a pergunta deixou de separar. Virou "fora do top com 40 ou mais conexões", com `{top: false}`
+- A propriedade `top` foi criada para isso: antes, "do top" e "completo" eram a mesma coisa; agora um anime pode estar completo (coletado no crawl) sem estar no top
+
+**Bilheteria → `SEM_DADOS`.** No uso real, "qual foi a bilheteria do filme de Chainsaw Man?" gerou `RETURN a.popularidade AS bilheteria`: a consulta é válida, roda e devolve um número com o nome errado. Nenhuma checagem pega isso, porque o erro é de significado. Daí a regra `SEM_DADOS` (seção 5b).
+
+**Efeito colateral da regra:** acrescentar `SEM_DADOS` ao prompt consertou a bilheteria e derrubou a E16, que vinha passando. Mais um caso de contexto no prompt mexendo em pergunta não relacionada, como a lista de valores categóricos (ver *Perguntas novas*).
+
+**As três falhas:**
+- **E12 (Jaccard), erro silencioso novo:** `interSize / unionSize` com dois inteiros é **divisão inteira** no Cypher, então a similaridade dá 0 ou 1 e o filtro `>= 0.5` zera o resultado. O modelo recebeu a dica de resultado vazio e respondeu vazio duas vezes. **Virou checagem no lint:** divisão em que os dois lados são `size()`, `count()`, `length()`, `COUNT {}` ou aliases deles, sem `toFloat`. Na rodada seguinte o modelo recebeu o erro e corrigiu na 2ª tentativa (`toFloat(interSize) / unionSize`); nenhuma resposta correta das avaliações anteriores dispara a checagem. A E12 continua errada, mas agora pelo motivo de antes do crawl: trata "é recomendado junto?" como filtro, não como coluna
+- **E16 (cadeia de sequências):** sintaxe inventada nas três tentativas: `-[:RELATED_TO {tipo: 'sequel'}*]->` (o `*` vem antes do mapa), depois as funções `index()` e `node()`, que não existem. O `EXPLAIN` acusa, mas o modelo troca um erro por outro
+- **N3 (adaptados de light novel):** usou `ADAPTED_FROM` (42) em vez da propriedade `fonte` (55). As duas leituras são defensáveis; falta uma convenção dizendo qual vale. Adiado
+
 ## Código
 | Arquivo | Papel |
 |---|---|
 | `analytics/schema.py` | schema lido do banco + convenções → `Schema` (texto do prompt e conjuntos para as checagens) |
-| `analytics/prompt.py` | instruções, 6 exemplos (diferentes das perguntas da avaliação), mensagens de retry |
+| `analytics/prompt.py` | instruções, 7 exemplos (diferentes das perguntas da avaliação, um deles `SEM_DADOS`), mensagens de retry |
 | `analytics/llm.py` | cliente de chat do oMLX; desliga o raciocínio dos Qwen3 |
 | `analytics/cypher.py` | extração, bloqueio de escrita, `EXPLAIN`, `LIMIT`, execução de leitura com timeout |
 | `analytics/lint.py` | checagens contra o schema |
 | `analytics/values.py` | checagem dos valores literais no banco, com sugestões |
-| `analytics/generator.py` | laço de geração com retry e revisão de resultado vazio |
+| `analytics/generator.py` | laço de geração com retry, revisão de resultado vazio e parada em `SEM_DADOS` |
 | `analytics/evaluation.py` | comparação de resultados |
 
 ## Questões em aberto
@@ -170,4 +197,5 @@ Mostra as tentativas que falharam, o Cypher e a tabela. Cada pergunta é registr
 - Gráficos no terminal (ex.: `plotext`) ou exportar HTML? (adiado)
 - Quantos exemplos few-shot cabem antes de piorar (ou encarecer) a geração?
 - O gerador generaliza? Falta um lote de perguntas guardado sem olhar (as 12 novas já orientaram ajustes)
-- Vale um exemplo few-shot de caminho de tamanho variável? Os modelos pequenos erraram as cadeias (E15, E16)
+- Vale um exemplo few-shot de caminho de tamanho variável? Os modelos pequenos erraram as cadeias (E15, E16), e depois do `SEM_DADOS` o gpt-oss também erra a E16. Mas exemplo novo é prompt novo, e prompt novo já derrubou outras perguntas
+- `fonte` ou `ADAPTED_FROM` para "adaptado de X" (N3)

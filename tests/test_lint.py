@@ -106,3 +106,26 @@ def test_strings_and_numbers_are_ignored():
 
 def test_function_namespaces_are_ignored():
     assert check_schema("MATCH (a:Anime) RETURN apoc.coll.sum([a.nota])", SCHEMA) == []
+
+
+@pytest.mark.parametrize("cypher", [
+    # E12 depois do crawl: size(...) AS x / size(...) AS y
+    "MATCH (a:Anime) WITH a, size([g IN [1] WHERE g > 0]) AS inter, size(apoc.coll.union([1], [2])) AS uniao "
+    "WITH a, inter / uniao AS sim WHERE sim >= 0.5 RETURN a.titulo",
+    "MATCH (a:Anime) RETURN count(a) / COUNT { (a)-[:HAS_GENRE]->() } AS p",
+    "MATCH (a:Anime) WITH count(a) AS n, count(a.nota) AS m RETURN m / n",
+])
+def test_integer_division_is_flagged(cypher):
+    problems = check_schema(cypher, SCHEMA)
+    assert len(problems) == 1 and "divisão inteira" in problems[0]
+
+
+@pytest.mark.parametrize("cypher", [
+    "MATCH (a:Anime) WITH toFloat(count(a)) AS n, count(a.nota) AS m RETURN m / n",
+    "MATCH (a:Anime) WITH count(a) AS n, count(a.nota) AS m RETURN toFloat(m) / n",
+    "MATCH (a:Anime) RETURN floor(a.nota / 10) * 10, count(a) / 2.0",
+    "MATCH (a:Anime) WITH count(a) AS n RETURN n / 10",
+    "MATCH (a:Anime {titulo: 'Fate/Zero'}) RETURN a.titulo",
+])
+def test_float_or_mixed_division_is_not_flagged(cypher):
+    assert check_schema(cypher, SCHEMA) == []

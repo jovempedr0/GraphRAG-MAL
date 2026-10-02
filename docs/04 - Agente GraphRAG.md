@@ -54,8 +54,8 @@ uv run --env-file config/.env python -m agent      # conversa
 
 Detalhes das ferramentas:
 - `busca_semantica`: um resultado por franquia (agrupa por `RELATED_TO` até 6 saltos; com 3, os filmes de Haikyuu escapavam)
-- `expandir_vizinhanca`: resolve o título em romaji ou inglês ("Attack on Titan" → Shingeki no Kyojin) e devolve recomendações, relacionados, a **cadeia de sequências completa** e, com `saltos=2`, o segundo grau
-- `consulta_cypher`: chama o gerador da nota 07; recusa SQL/Cypher no argumento (o gpt-oss chegou a mandar `SELECT ... FROM Anime`)
+- `expandir_vizinhanca`: resolve o título em romaji ou inglês ("Attack on Titan" → Shingeki no Kyojin) e devolve recomendações, relacionados, a **cadeia de sequências completa** e, com `saltos=2`, o segundo grau. As recomendações vêm cortadas nas 15 com mais votos; quando há mais, o campo `recomendacoes_obs` diz "mostrando as 15 com mais votos de N"
+- `consulta_cypher`: chama o gerador da nota 07; recusa SQL/Cypher no argumento (o gpt-oss chegou a mandar `SELECT ... FROM Anime`). Se o gerador responder `SEM_DADOS`, devolve `{"sem_dados": motivo}`
 
 **Primeiros testes com o gpt-oss-20b** (4 perguntas, 8–23 s cada): escolhe bem a ferramenta, mas **completa de memória o que falta no resultado**:
 - inventou a ordem das temporadas de Attack on Titan (com anos errados) quando a ferramenta só trazia a sequência direta → a cadeia completa resolveu
@@ -65,6 +65,27 @@ Detalhes das ferramentas:
 Lição: com modelo local, **lacuna no resultado da ferramenta vira alucinação**. Vale mais completar o resultado do que pedir no prompt para não inventar.
 
 O backend do Claude tem teste unitário com cliente falso, mas ainda não rodou de verdade (falta credencial).
+
+**Interface web** (`ui/`, FastAPI): chat que mostra cada passo ao vivo (SSE), aba de analytics com o Cypher editável, explorador do grafo (Cytoscape.js) e painel das avaliações. `uv run --env-file config/.env uvicorn ui.server:app --port 8765`.
+
+## Avaliação do agente (2026-10-01)
+`eval/agent_questions.json`, 15 perguntas (A1–A15): recomendação, filtro, semântica, franquia, agregação, fato, multi-hop, sinopse, perguntas sem resposta e uma continuação de conversa (campo `antes`).
+```
+uv run --env-file config/.env python -m eval.agent_run [--only A1,A4]
+```
+Correção **automática**, sem LLM como juiz. Uma resposta passa se:
+- chamou uma das ferramentas esperadas
+- cita a fração mínima dos títulos que a consulta de referência devolve (calculada na hora, então acompanha o grafo)
+- contém os textos obrigatórios (`deve_conter`, `deve_conter_algum`)
+- **não cita nenhuma nota sem fonte**: decimal da resposta que não aparece em nenhum resultado de ferramenta. É a medida direta de alucinação
+
+**Resultado depois do crawl (gpt-oss-20b): 15/15**, ferramenta certa 15/15, nenhuma nota sem fonte, mediana ~10 s.
+
+### Casos que mudaram o agente
+- **Falso negativo da sinopse (uso real, pela interface):** perguntaram o nome do protagonista de Bleach. A ferramenta trouxe a sinopse, que cita Ichigo, mas o agente respondeu que o grafo não tinha personagens, porque o prompt mandava não usar nada fora das ferramentas e ele não contou a sinopse como dado. Regra nova: a sinopse pode ser usada, dizendo que veio dela. Viraram as perguntas A13 (protagonista), A14 (fillers: não há dado) e A15 (continuação: "e o personagem principal do anime?" depois de uma pergunta com erro de digitação, "bleack")
+- **Bilheteria (A11):** ver `SEM_DADOS` em [[07 - Gerador de Cypher]]. O gerador chegou a devolver a popularidade numa coluna chamada `bilheteria`; pela `consulta_cypher`, o agente receberia esse número como se fosse bilheteria. Agora recebe `sem_dados` e diz que o grafo não tem a informação
+- **Interseção (A7, "recomendado para Death Note e para Code Geass"):** antes do crawl, o agente chamava `expandir_vizinhanca` duas vezes e cruzava as listas. Com o grafo maior, cada título tem dezenas de recomendações, o corte em 15 escondia a maior parte da interseção e a resposta saía incompleta sem aviso. Duas mudanças: o aviso `recomendacoes_obs` no resultado e a orientação no prompt de mandar "o que X e Y têm em comum" para `consulta_cypher`. Agora a A7 acerta 18/18
+- **Token do gpt-oss vazando no nome da ferramenta (A10):** numa chamada, o nome veio como `consulta_cypher<|channel|>commentary`, um pedaço do formato *harmony* do gpt-oss que o oMLX não separou. O loop devolveu erro de ferramenta desconhecida e o modelo repetiu a chamada com o nome certo, então a pergunta passou. Agora o `OmlxBackend` corta o nome no `<|` antes de procurar a ferramenta (`tool_name`). Na mesma pergunta, a primeira chamada mandou Cypher com propriedades em inglês (`a.genres`, `a.episodes`), que a ferramenta recusou
 
 ## Pontos de atenção
 - `consulta_cypher`: validar a query antes de rodar e executar em **transação de leitura** (`session.execute_read`), que o servidor rejeita se houver escrita. Usuário somente leitura (RBAC) só existe no Neo4j Enterprise; estamos na Community

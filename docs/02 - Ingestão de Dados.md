@@ -42,7 +42,20 @@ Voltar: [[00 - Índice GraphRAG Anime]] · Próxima: [[03 - Modelo do Grafo]]
 2. Para cada item: buscar detalhe com `fields` (já inclui recomendações)
 3. Gravar o JSON bruto em disco (cache) antes de ir pro banco → evita refazer chamadas
 4. Carregar no Neo4j com `MERGE` (idempotente)
-5. Expandir depois pelas recomendações (crawl em largura com limite de profundidade)
+5. Expandir depois pelas recomendações e relações (crawl da fronteira, abaixo)
+
+## Crawl da fronteira (2026-10-01)
+`ingest/crawl.py` coleta os **nós esboço** que já estão no grafo (recomendações e relações dos itens coletados), os mais conectados primeiro:
+```
+uv run --env-file config/.env python -m ingest.crawl anime [--limit N] [--min-recomendacoes 2]
+uv run --env-file config/.env python -m ingest.load
+```
+- um passo por rodada: os esboços que os itens recém-coletados criam ficam para a próxima
+- os ids coletados ficam em `data/state/crawl_<tipo>_ids.json`, que o loader lê junto com o top e usa para marcar `top`
+- `--min-recomendacoes` evita gastar requisições com esboços que aparecem uma vez só
+- rodadas feitas: uma da fronteira inteira e uma segunda só para os esboços mais conectados. Resultado: 2.954 animes e 2.735 mangás completos (eram 500 + 500)
+
+Depois do crawl: `ingest.embed` (embeddings dos nós novos) e `ingest.adapt --buscar` (`ADAPTED_FROM`, ver [[03 - Modelo do Grafo]]). O pipeline inteiro rodou sem supervisão, encadeado num script
 
 ## Cuidados
 - Respeitar rate limit (fila + sleep)

@@ -2,7 +2,8 @@
 
 O EXPLAIN só reclama de label, relação ou propriedade que não existem em lugar nenhum do banco.
 Os erros silenciosos são outros: seta invertida (a consulta roda e volta vazia) e propriedade
-que existe, mas em outro lugar (`o.votos` em vez de `r.votos`, que devolve nulos).
+que existe, mas em outro lugar (`o.votos` em vez de `r.votos`, que devolve nulos), e divisão
+entre contagens, que no Cypher é divisão inteira (2 / 5 = 0) e zera proporções sem erro.
 """
 import re
 
@@ -17,6 +18,10 @@ REL_VAR_TYPE = re.compile(r"\[\s*(\w+)\s*:\s*(\w+)\s*[\]*{\s]")
 VAR_LABEL = re.compile(r"^\s*(\w+)?\s*(?::\s*(\w+))?")
 REL_TYPES = re.compile(r":\s*([\w|:]+)")
 PROPERTY_ACCESS = re.compile(r"(?<![\w.])([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b(?!\s*\()")
+INTEGER_CALL = re.compile(r"\b(?:size|count|length)\s*\(|\bCOUNT\s*\{", re.IGNORECASE)
+INT = "__int__"
+INT_ALIAS = re.compile(rf"{INT}\s+AS\s+(\w+)", re.IGNORECASE)
+DIVISION = re.compile(r"(?<![\w.])(\w+)\s*/\s*(\w+)(?![\w.(])")
 
 
 def strip_strings(cypher):
@@ -34,7 +39,8 @@ def check_schema(cypher, schema):
     """Devolve a lista de problemas (texto para o modelo corrigir); vazia se estiver tudo certo."""
     text = strip_strings(cypher)
     node_vars, rel_vars = variables(text)
-    return _check_directions(text, node_vars, schema) + _check_properties(text, node_vars, rel_vars, schema)
+    return (_check_directions(text, node_vars, schema) + _check_properties(text, node_vars, rel_vars, schema)
+            + _check_integer_division(text))
 
 
 def variables(text):
@@ -105,4 +111,34 @@ def _check_properties(text, node_vars, rel_vars, schema):
             rel_type = rel_vars[var]
             if rel_type in schema.rel_props and prop not in schema.rel_props[rel_type]:
                 problems.append(f"`{var}.{prop}`: a relação {rel_type} não tem a propriedade `{prop}`")
+    return problems
+
+
+def _replace_integer_calls(text):
+    """Troca cada size(...), count(...), length(...) e COUNT {...} (com o que tiver dentro) por INT."""
+    out, pos = [], 0
+    while match := INTEGER_CALL.search(text, pos):
+        opening = text[match.end() - 1]
+        closing = ")" if opening == "(" else "}"
+        depth, end = 0, match.end() - 1
+        for end in range(match.end() - 1, len(text)):
+            depth += {opening: 1, closing: -1}.get(text[end], 0)
+            if depth == 0:
+                break
+        out += [text[pos:match.start()], INT]
+        pos = end + 1
+    return "".join(out) + text[pos:]
+
+
+def _check_integer_division(text):
+    """Divisão em que os dois lados são contagens (diretas ou por alias): dá 0 ou 1, nunca 0,4."""
+    text = _replace_integer_calls(text)
+    integers = {INT, *INT_ALIAS.findall(text)}
+    problems = []
+    for left, right in DIVISION.findall(text):
+        if left in integers and right in integers:
+            shown = " / ".join("contagem" if x == INT else f"`{x}`" for x in (left, right))
+            fix = "toFloat(...)" if left == INT else f"toFloat({left})"
+            problems.append(f"{shown}: divisão entre inteiros (size/count) é divisão inteira no Cypher "
+                            f"e dá 0 ou 1; use {fix} no numerador")
     return problems

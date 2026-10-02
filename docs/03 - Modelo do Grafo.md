@@ -12,8 +12,8 @@ Voltar: [[00 - Índice GraphRAG Anime]] · Anterior: [[02 - Ingestão de Dados]]
 ## Nós
 | Label | Propriedades principais |
 |---|---|
-| `Anime` | `mal_id`, `titulo`, `titulo_en`, `sinopse`, `nota`, `rank`, `popularidade`, `membros`, `tipo`, `status`, `ano`, `episodios`, `fonte`, `completo`, `embedding` |
-| `Manga` | `mal_id`, `titulo`, `titulo_en`, `sinopse`, `nota`, `rank`, `popularidade`, `membros`, `tipo`, `status`, `ano`, `capitulos`, `volumes`, `completo`, `embedding` |
+| `Anime` | `mal_id`, `titulo`, `titulo_en`, `sinopse`, `nota`, `rank`, `popularidade`, `membros`, `tipo`, `status`, `ano`, `episodios`, `fonte`, `completo`, `top`, `embedding` |
+| `Manga` | `mal_id`, `titulo`, `titulo_en`, `sinopse`, `nota`, `rank`, `popularidade`, `membros`, `tipo`, `status`, `ano`, `capitulos`, `volumes`, `completo`, `top`, `embedding` |
 | `Genre` | `nome` (chave — o MAL reaproveita ids de gênero entre anime e mangá: 41 = Suspense em anime, Seinen em mangá) |
 | `Studio` | `mal_id`, `nome` |
 | `Author` | `mal_id`, `nome` |
@@ -23,14 +23,18 @@ Voltar: [[00 - Índice GraphRAG Anime]] · Anterior: [[02 - Ingestão de Dados]]
 |---|---|---|
 | `HAS_GENRE` | Anime/Manga → Genre | — |
 | `RECOMMENDS` | Anime → Anime, Manga → Manga | `votos` — um sentido só, do menor `mal_id` para o maior; consultar com `-[:RECOMMENDS]-` |
-| `ADAPTED_FROM` | Anime → Manga | — **(planejada, ainda não existe no banco**; ver Questões em aberto) |
+| `ADAPTED_FROM` | Anime → Manga | — criada por casamento de títulos (`ingest/adapt.py`); ver abaixo |
 | `PRODUCED_BY` | Anime → Studio | — |
 | `WRITTEN_BY` | Manga → Author | `papel` (ex.: Story & Art) |
 | `RELATED_TO` | Anime → Anime, Manga → Manga | `tipo` — `(a)-[:RELATED_TO {tipo}]->(b)` = "b é `tipo` de a" |
 
 **Embeddings:** `embedding` (1024 floats) e `embedding_modelo` nos nós completos com sinopse; índices vetoriais `anime_embedding_1024` e `manga_embedding_1024` (cosseno), criados por `ingest/embed.py` (o nome do índice leva a dimensão do modelo).
 
-**Nós esboço:** itens recomendados fora do top entram só com `mal_id` + `titulo` e `completo = false` (fronteira para o crawl da etapa 8). Filtrar com `completo = true` quando precisar de nota/gênero.
+**Nós esboço:** itens recomendados ou relacionados que ainda não foram coletados entram só com `mal_id` + `titulo` e `completo = false`. São a fronteira do crawl ([[02 - Ingestão de Dados]]). Filtrar com `completo = true` quando precisar de nota/gênero.
+
+**`top` × `completo`:** `top = true` marca os 500 do ranking de cada tipo; `completo = true` diz só que o nó tem os detalhes. Depois do crawl são coisas diferentes: um anime coletado pelo crawl é completo, mas `top = false`. Esboços nascem com `top = false`.
+
+**Grafo atual (2026-10-01):** 7.266 animes (2.954 completos), 6.329 mangás (2.735 completos), 23.757 `RECOMMENDS`, 7.664 `RELATED_TO`, 892 `ADAPTED_FROM`, 2.861 autores, 346 estúdios, 80 gêneros.
 
 ## Constraints e índices
 Em `schema/constraints.cypher` (unicidade em `mal_id` para Anime/Manga/Studio/Author, `nome` para Genre; índices em `nota`).
@@ -43,7 +47,6 @@ WHERE a.nota > 8
 RETURN a.titulo, a.nota ORDER BY a.nota DESC LIMIT 10;
 
 // Mangás bem avaliados sem adaptação em anime
-// (só funciona depois que ADAPTED_FROM existir; hoje volta todos os mangás com nota > 8)
 MATCH (m:Manga)
 WHERE m.nota > 8 AND NOT EXISTS { (:Anime)-[:ADAPTED_FROM]->(m) }
 RETURN m.titulo, m.nota ORDER BY m.nota DESC LIMIT 20;
@@ -60,5 +63,12 @@ RETURN m.titulo, m.nota ORDER BY m.nota DESC LIMIT 20;
 - os demais (`sequel`, `side_story`, `spin_off`, `summary`, `adaptation`) ficam como estão na página
 - exceção conhecida: 9 pares em que o MAL é inconsistente (ex.: `spin_off` de um lado, `parent_story` do outro) ficam com 2 arestas
 
+**`ADAPTED_FROM`:** a API MAL v2 não devolve relações anime↔mangá, então `ingest/adapt.py` casa pelos títulos:
+1. título japonês, romaji ou inglês, normalizado e sem sufixo de temporada ("2nd Season", "第2期"), e só se a `fonte` do anime for compatível com o tipo do mangá (mangá ↔ manga/manhwa/manhua, light novel ↔ light_novel/novel)
+2. com mais de um candidato, fica o do tipo preferido para aquela fonte
+3. anime sem par direto herda o da cadeia de sequências (a Season 2 herda o mangá da Season 1). O grafo de sequências é tratado como simétrico para a herança andar nos dois sentidos
+4. `--buscar`: para cada mangá do top ainda sem adaptação, procura no MAL um anime com o mesmo título; os achados entram no crawl
+
 ## Questões em aberto
-- `ADAPTED_FROM`: a API MAL v2 não devolve relações anime↔mangá. Opções: campo `source` do anime (diz que veio de mangá, mas não de qual) + casar por título/autor; ou buscar só as relações na Jikan (`/anime/{id}/relations`) quando ela estiver estável
+- `ADAPTED_FROM` é heurística: faltam adaptações com títulos diferentes, e casos raros podem casar errado
+- "Adaptado de light novel" tem duas respostas: a propriedade `fonte` do anime (55 no top 500) ou `ADAPTED_FROM` (42, só quando o mangá/novel está no grafo). Falta uma convenção para o gerador de Cypher ([[07 - Gerador de Cypher]], N3)

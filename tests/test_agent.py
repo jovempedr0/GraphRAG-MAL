@@ -223,3 +223,15 @@ def test_anthropic_refusal():
 def test_to_text_drops_nulls_and_truncates():
     assert to_text({"a": 1, "b": None, "c": [{"d": None, "e": 2}]}) == '{"a": 1, "c": [{"e": 2}]}'
     assert to_text({"x": "y" * 20000}).endswith("…(cortado)")
+
+
+def test_omlx_tool_name_drops_leaked_harmony_tokens():
+    reply = {"choices": [{"finish_reason": "tool_calls", "message": {"content": "", "tool_calls": [
+        {"id": "c1", "type": "function", "function": {
+            "name": "consulta_cypher<|channel|>commentary", "arguments": "{\"pergunta\": \"x\"}"}}]}}],
+        "usage": {"total_tokens": 1}}
+    b = OmlxBackend("http://t/v1", "k", "m",
+                    transport=httpx.MockTransport(lambda r: httpx.Response(200, json=reply)))
+    b.start("s", [])
+    b.add_user("q")
+    assert b.step().calls[0].name == "consulta_cypher"

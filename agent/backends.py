@@ -26,6 +26,11 @@ class Turn:
     tokens: int = 0
 
 
+def tool_name(name):
+    """O gpt-oss às vezes deixa vazar o formato harmony no nome: `consulta_cypher<|channel|>commentary`."""
+    return name.split("<|")[0].strip()
+
+
 def tool_spec(name, description, parameters):
     """Ferramenta no formato neutro; cada backend converte para o seu."""
     return {"name": name, "description": description, "parameters": parameters}
@@ -79,7 +84,7 @@ class OmlxBackend:
                 args = args if isinstance(args, dict) else None
             except json.JSONDecodeError:
                 args = None
-            calls.append(ToolCall(c["id"], c["function"]["name"], args, raw))
+            calls.append(ToolCall(c["id"], tool_name(c["function"]["name"]), args, raw))
         stop = "tool_use" if calls else ("max_tokens" if choice.get("finish_reason") == "length" else "end")
         return Turn(msg.get("content") or "", calls, stop, data.get("usage", {}).get("total_tokens", 0))
 
