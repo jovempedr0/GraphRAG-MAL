@@ -69,6 +69,8 @@ class OmlxBackend:
         resp = self._http.post("/chat/completions", json=body)
         resp.raise_for_status()
         data = resp.json()
+        if not data.get("choices"):  # o oMLX às vezes devolve 200 com um erro no corpo
+            raise RuntimeError(f"resposta do oMLX sem choices: {str(data)[:500]}")
         choice = data["choices"][0]
         msg = choice["message"]
         raw_calls = msg.get("tool_calls") or []

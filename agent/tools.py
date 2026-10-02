@@ -240,8 +240,13 @@ class Tools:
     def consulta_cypher(self, pergunta):
         ans = generate(pergunta, self.cypher_chat, self.session, self.schema)
         if ans.no_data:
+            # O gerador às vezes erra aqui ("recomendado por Monster" virou recomendação de estúdio),
+            # então o resultado pede uma conferência antes de desistir.
             return {"sem_dados": ans.no_data,
-                    "obs": "o grafo não tem essa informação; diga isso na resposta, sem trocar por outro dado"}
+                    "obs": "o gerador de Cypher concluiu que o grafo não tem essa informação. Se a pergunta "
+                           "é sobre um título (recomendações, relacionados, nota, episódios), confira com "
+                           "expandir_vizinhanca antes de concluir. Se faltar mesmo, diga isso na resposta, "
+                           "sem trocar por outro dado"}
         if not ans.ok:
             errors = [a.error for a in ans.attempts if a.error]
             raise ToolError(f"não consegui gerar uma consulta válida. Erros: {to_text(errors)}")

@@ -10,7 +10,10 @@ Regras:
    com o tipo do mangá (mangá ↔ manga/manhwa/manhua, light novel ↔ light_novel...)
 2. Se houver mais de um candidato, fica o do tipo preferido para aquela fonte
 3. Anime sem par direto herda o da cadeia de sequências (Season 2 → mangá da Season 1)
-4. --buscar: para cada mangá do top ainda sem adaptação, procura no MAL um anime com o
+4. Depois, herda também por história paralela, resumo e versão alternativa (filmes e especiais
+   com título próprio, como Violet Evergarden Gaiden), marcado como metodo = 'relacionado'.
+   Em 3 e 4, só entre animes com a mesma fonte
+5. --buscar: para cada mangá do top ainda sem adaptação, procura no MAL um anime com o
    mesmo título; os encontrados são coletados e entram em data/state/crawl_anime_ids.json.
    Depois: `ingest.load` e outra rodada deste script
 """
@@ -76,34 +79,49 @@ def match(anime, index, mangas):
     return min(candidates, key=lambda c: (accepted.index(mangas[c]["media_type"]), c))
 
 
-def sequel_graph(animes):
-    """Vizinhos por sequel/prequel nos dois sentidos (a página de um lado pode não listar o outro)."""
+SEQUEL_TYPES = ("sequel", "prequel")
+# Mesma obra original na maioria dos casos. spin_off, alternative_setting e character ficam de
+# fora: costumam ter obra própria (Sword Oratoria é outra light novel, não a de DanMachi).
+RELATED_TYPES = ("side_story", "parent_story", "summary", "full_story", "alternative_version")
+
+
+def related_graph(animes, types):
+    """Vizinhos pelos tipos de relação dados, nos dois sentidos (a página de um lado pode não listar o outro)."""
     graph = defaultdict(set)
     for a_id, a in animes.items():
         for r in a.get("related_anime") or []:
-            if r.get("relation_type") in ("sequel", "prequel"):
+            if r.get("relation_type") in types:
                 graph[a_id].add(r["node"]["id"])
                 graph[r["node"]["id"]].add(a_id)
     return graph
 
 
-def adaptations(animes, mangas):
-    """{anime_id: (manga_id, metodo)} com casamento direto e propagação pela cadeia."""
-    index = build_index(mangas)
-    result = {a_id: (m_id, "titulo") for a_id, a in animes.items()
-              if (m_id := match(a, index, mangas)) is not None}
-    graph = sequel_graph(animes)
+def sequel_graph(animes):
+    return related_graph(animes, SEQUEL_TYPES)
+
+
+def _propagate(animes, result, graph, method):
     changed = True
-    while changed:  # espalha pela cadeia até estabilizar
+    while changed:  # espalha até estabilizar
         changed = False
         for a_id, a in animes.items():
             if a_id in result or a.get("source") not in SOURCE_TYPES:
                 continue
             for n in sorted(graph[a_id]):
                 if n in result and animes.get(n, {}).get("source") == a.get("source"):
-                    result[a_id] = (result[n][0], "sequencia")
+                    result[a_id] = (result[n][0], method)
                     changed = True
                     break
+
+
+def adaptations(animes, mangas):
+    """{anime_id: (manga_id, metodo)}: casamento direto, depois a cadeia de sequências e, por
+    último, as outras relações. A ordem faz a sequência ganhar quando as duas levariam a obras diferentes."""
+    index = build_index(mangas)
+    result = {a_id: (m_id, "titulo") for a_id, a in animes.items()
+              if (m_id := match(a, index, mangas)) is not None}
+    _propagate(animes, result, sequel_graph(animes), "sequencia")
+    _propagate(animes, result, related_graph(animes, SEQUEL_TYPES + RELATED_TYPES), "relacionado")
     return result
 
 

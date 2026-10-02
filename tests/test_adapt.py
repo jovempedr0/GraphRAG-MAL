@@ -1,10 +1,12 @@
 from ingest.adapt import adaptations, match, build_index, norm_title, reverse_search
 
 
-def anime(id, title, source="manga", ja=None, en=None, sequels=()):
+def anime(id, title, source="manga", ja=None, en=None, sequels=(), related=()):
+    """related: pares (id, tipo de relação), além das sequências."""
     return {"id": id, "title": title, "source": source,
             "alternative_titles": {"ja": ja, "en": en},
-            "related_anime": [{"node": {"id": s}, "relation_type": "sequel"} for s in sequels]}
+            "related_anime": [{"node": {"id": s}, "relation_type": "sequel"} for s in sequels]
+                             + [{"node": {"id": i}, "relation_type": t} for i, t in related]}
 
 
 def manga(id, title, media_type="manga", ja=None, en=None):
@@ -52,6 +54,33 @@ def test_chain_does_not_cross_different_sources():
     mangas = {10: manga(10, "X")}
     animes = {1: anime(1, "X", sequels=[2]), 2: anime(2, "X Movie", source="original")}
     assert 2 not in adaptations(animes, mangas)
+
+
+def test_side_story_and_its_sequel_inherit_as_related():
+    # Filme/especial com título próprio: só a relação leva à obra original
+    mangas = {10: manga(10, "Violet Evergarden", "light_novel")}
+    animes = {1: anime(1, "Violet Evergarden", "light_novel", related=[(2, "side_story")]),
+              2: anime(2, "Violet Evergarden Gaiden", "light_novel", sequels=[3]),
+              3: anime(3, "Violet Evergarden Movie", "light_novel")}
+    result = adaptations(animes, mangas)
+    assert result == {1: (10, "titulo"), 2: (10, "relacionado"), 3: (10, "relacionado")}
+
+
+def test_related_does_not_cross_sources_or_follow_spin_off():
+    mangas = {10: manga(10, "One Piece")}
+    animes = {1: anime(1, "One Piece", related=[(2, "side_story"), (3, "spin_off")]),
+              2: anime(2, "One Piece Fan Letter", "light_novel"),
+              3: anime(3, "One Piece Spin-off")}
+    assert adaptations(animes, mangas) == {1: (10, "titulo")}
+
+
+def test_sequel_wins_over_other_relations():
+    mangas = {10: manga(10, "A"), 20: manga(20, "B")}
+    # 3 é sequência de 2 (obra 20) e história paralela de 1 (obra 10): fica com a da sequência
+    animes = {1: anime(1, "A", related=[(3, "side_story")]),
+              2: anime(2, "B", sequels=[3]),
+              3: anime(3, "C")}
+    assert adaptations(animes, mangas)[3] == (20, "sequencia")
 
 
 class FakeClient:

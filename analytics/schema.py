@@ -15,6 +15,7 @@ CONVENTIONS = """\
 - `nota` vai de 0 a 10; `ano` é o ano de estreia
 - Títulos (`titulo`) estão em romaji, como no MyAnimeList (ex.: 'Shingeki no Kyojin'); `titulo_en` é o título em inglês. Use o título exato; se a pergunta usar um nome popular (ex.: 'Frieren'), a validação devolve os títulos parecidos
 - Propriedades categóricas (`fonte`, `status`, `tipo`) usam valores em minúsculas do MyAnimeList (ex.: `tipo = 'movie'`); se o valor não existir, a validação devolve os válidos
+- "Adaptado de light novel/mangá/..." (o tipo da obra original, contagens e proporções por origem) usa a propriedade `a.fonte` do anime, que está completa. `ADAPTED_FROM` é só para quando a pergunta precisa da obra em si (qual mangá originou X, autor ou nota do original, mangás com ou sem anime): a relação existe só quando a obra original está no grafo
 - Não retorne a propriedade `embedding` (vetor de 1024 números)"""
 
 SKIP_PROPERTIES = {"embedding", "embedding_modelo"}
