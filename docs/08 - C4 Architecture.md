@@ -53,62 +53,84 @@ flowchart TB
 
 ## Level 2: Containers
 
-The processes and stores that make up the system. Everything runs on the Mac; only Neo4j runs in Docker.
+The processes and stores that make up the system. Everything runs on the Mac; only Neo4j runs in Docker. To fit on screen, this level is split into two diagrams: question time and preparation.
+
+### Question time
 
 ```mermaid
-flowchart TB
+flowchart LR
     user["👤 <b>User</b>"]
-    dev["👤 <b>Developer</b>"]
 
     subgraph sys["Anime & Manga GraphRAG"]
-        spa["<b>Web UI</b><br/>[HTML/JS, Cytoscape.js, Chart.js]<br/>Chat with live agent steps, analytics,<br/>graph explorer, evaluation dashboard"]
-        api["<b>Web server</b><br/>[Python, FastAPI · ui/server.py]<br/>REST + streaming of agent steps"]
-        cli["<b>CLIs</b><br/>[Python · python -m agent / analytics]<br/>Agent and question→Cypher in the terminal"]
-        ingest["<b>Ingestion pipeline</b><br/>[Python · ingest/]<br/>fetch → load → crawl → embed → adapt"]
-        evals["<b>Evaluation</b><br/>[Python · eval/]<br/>Scores the Cypher generator and the agent"]
-        neo4j[("<b>Neo4j 2026.09 + APOC</b><br/>[Docker]<br/>Anime/Manga/Genre/Studio/Author graph<br/>+ vector indexes over synopses")]
-        files[("<b>data/</b><br/>[JSON/JSONL files]<br/>raw/ API cache · state/ ids and failures<br/>logs/ questions · eval/ results")]
+        spa["<b>Web UI</b><br/>[HTML/JS]<br/>chat, analytics,<br/>graph explorer"]
+        api["<b>Web server</b><br/>[FastAPI · ui/server.py]<br/>REST + streaming<br/>of agent steps"]
+        neo4j[("<b>Neo4j + APOC</b><br/>[Docker]<br/>graph + vector indexes")]
+        logs[("<b>data/logs/</b><br/>[JSONL]")]
     end
 
-    mal["<b>MyAnimeList API v2</b>"]
     omlx["<b>oMLX</b><br/>gpt-oss-20b · BGE-M3"]
     claude["<b>Anthropic API</b>"]
 
-    user -- "uses [HTTPS/HTTP]" --> spa
-    user -- "uses" --> cli
-    dev -- "runs" --> ingest
-    dev -- "runs" --> evals
-    spa -- "calls /api/* [JSON, streaming]" --> api
-
-    api -- "reads [Bolt, read transaction]" --> neo4j
-    cli -- "reads [Bolt]" --> neo4j
-    evals -- "reads [Bolt]" --> neo4j
-    ingest -- "writes with MERGE [Bolt]" --> neo4j
-
+    user -- "browser" --> spa
+    spa -- "/api/*" --> api
+    api -- "reads [Bolt]" --> neo4j
+    api -- "logs questions" --> logs
     api -- "chat, embeddings" --> omlx
-    cli -- "chat, embeddings" --> omlx
-    evals -- "chat, embeddings" --> omlx
-    ingest -- "synopsis embeddings" --> omlx
     api -. "optional" .-> claude
-    cli -. "optional" .-> claude
-    evals -. "optional" .-> claude
-
-    ingest -- "fetches [HTTPS, rate limit, retries]" --> mal
-    ingest -- "cache and state" --> files
-    api -- "writes logs, reads evaluations" --> files
-    cli -- "writes logs" --> files
-    evals -- "writes results" --> files
 
     classDef person fill:#08427b,stroke:#052e56,color:#fff
     classDef container fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000
     classDef store fill:#f5c542,stroke:#b8901f,color:#000
     classDef external fill:#999,stroke:#6b6b6b,color:#fff
-    class user,dev person
-    class spa,api,cli,ingest,evals container
-    class neo4j,files store
-    class mal,omlx,claude external
+    class user person
+    class spa,api container
+    class neo4j,logs store
+    class omlx,claude external
     style sys fill:none,stroke:#1168bd,stroke-width:2px,stroke-dasharray:5 5
 ```
+
+The **CLIs** (`python -m agent` and `python -m analytics`) take the same path as the web server, without the UI: they use the same core (level 3), read Neo4j, call oMLX (or Claude) and write to `data/logs/`.
+
+### Preparation
+
+```mermaid
+flowchart LR
+    dev["👤 <b>Developer</b>"]
+
+    subgraph sys["Anime & Manga GraphRAG"]
+        ingest["<b>Ingestion</b><br/>[Python · ingest/]<br/>fetch → load → crawl<br/>→ embed → adapt"]
+        evals["<b>Evaluation</b><br/>[Python · eval/]<br/>Cypher generator<br/>and agent"]
+        neo4j[("<b>Neo4j + APOC</b><br/>[Docker]")]
+        files[("<b>data/</b><br/>raw/ · state/ · eval/")]
+    end
+
+    mal["<b>MyAnimeList API v2</b>"]
+    omlx["<b>oMLX</b>"]
+
+    dev -- "./run.sh dados" --> ingest
+    dev -- "./run.sh eval" --> evals
+    ingest -- "HTTPS, rate limit" --> mal
+    ingest -- "MERGE [Bolt]" --> neo4j
+    ingest -- "embeddings" --> omlx
+    ingest -- "cache and state" --> files
+    evals -- "reads [Bolt]" --> neo4j
+    evals -- "chat, embeddings" --> omlx
+    evals -- "results" --> files
+
+    classDef person fill:#08427b,stroke:#052e56,color:#fff
+    classDef container fill:#438dd5,stroke:#2e6295,color:#fff
+    classDef component fill:#85bbf0,stroke:#5d82a8,color:#000
+    classDef store fill:#f5c542,stroke:#b8901f,color:#000
+    classDef external fill:#999,stroke:#6b6b6b,color:#fff
+    class dev person
+    class ingest,evals container
+    class neo4j,files store
+    class mal,omlx external
+    style sys fill:none,stroke:#1168bd,stroke-width:2px,stroke-dasharray:5 5
+```
+
+The Web UI's evaluation dashboard reads the results in `data/eval/`.
 
 ## Level 3: Components of the agent and the Cypher generator
 
@@ -116,54 +138,47 @@ The core shared by the web server, the CLIs and the evaluation: the `agent/` and
 
 ```mermaid
 flowchart TB
-    caller["<b>Web server · CLIs · Evaluation</b><br/>(level 2 containers)"]
+    caller["<b>Web server · CLIs · Evaluation</b>"]
 
     subgraph agentpkg["agent/"]
-        loop["<b>Agent</b><br/>[agent/loop.py]<br/>Tool-use loop with a step limit;<br/>records every step (Step)"]
-        backends["<b>Backends</b><br/>[agent/backends.py]<br/>OmlxBackend · AnthropicBackend<br/>thin layer over both APIs"]
-        tools["<b>Tools</b><br/>[agent/tools.py]<br/>busca_semantica · expandir_vizinhanca<br/>· consulta_cypher; validates arguments"]
+        loop["<b>Agent</b><br/>[loop.py]<br/>tool-use loop,<br/>at most 8 steps"]
+        backends["<b>Backends</b><br/>[backends.py]<br/>oMLX · Anthropic"]
+        tools["<b>Tools</b><br/>[tools.py]<br/>busca_semantica<br/>expandir_vizinhanca<br/>consulta_cypher"]
     end
 
     subgraph analyticspkg["analytics/"]
-        generator["<b>Generator</b><br/>[generator.py]<br/>question → Cypher with retries<br/>or SEM_DADOS (no data)"]
-        prompt["<b>Prompt</b><br/>[prompt.py]<br/>few-shot, schema conventions,<br/>error messages for the model"]
-        cypher["<b>Validation and execution</b><br/>[cypher.py, lint.py, values.py]<br/>blocks writes, EXPLAIN, arrows and<br/>properties vs. real schema, close values"]
-        schema["<b>Schema</b><br/>[schema.py]<br/>Reads labels, relationships and<br/>properties from the database"]
-        llm["<b>ChatClient</b><br/>[llm.py]<br/>OpenAI-compatible client"]
+        generator["<b>Generator</b><br/>[generator.py]<br/>question → Cypher,<br/>with retries"]
+        prompt["<b>Prompt and schema</b><br/>[prompt.py, schema.py]<br/>few-shot and conventions"]
+        cypher["<b>Validation</b><br/>[cypher.py, lint.py, values.py]<br/>read-only, EXPLAIN,<br/>real schema, close values"]
     end
-
-    embed["<b>EmbeddingClient</b><br/>[ingest/embeddings.py]"]
 
     neo4j[("<b>Neo4j</b>")]
     omlx["<b>oMLX</b>"]
     claude["<b>Anthropic API</b>"]
 
-    caller -- "question" --> loop
-    caller -- "question (analytics directly)" --> generator
-    loop -- "next turn" --> backends
-    loop -- "runs tool calls" --> tools
-    backends -- "[HTTP]" --> omlx
-    backends -. "[HTTPS] optional" .-> claude
-
-    tools -- "busca_semantica: query vector" --> embed
-    tools -- "neighborhood, vector search, franchises" --> neo4j
+    caller --> loop
+    caller -- "analytics directly" --> generator
+    loop --> backends
+    loop --> tools
     tools -- "consulta_cypher" --> generator
-
     generator --> prompt
-    prompt -- "uses" --> schema
-    generator -- "writes Cypher" --> llm
-    generator -- "validates and runs" --> cypher
-    cypher -- "EXPLAIN + read with timeout" --> neo4j
-    schema -- "introspection" --> neo4j
-    llm -- "gpt-oss-20b [HTTP]" --> omlx
-    embed -- "BGE-M3 [HTTP]" --> omlx
+    generator --> cypher
 
+    backends -- "gpt-oss-20b" --> omlx
+    backends -. "optional" .-> claude
+    tools -- "BGE-M3" --> omlx
+    generator -- "gpt-oss-20b" --> omlx
+    tools -- "neighborhood, vectors" --> neo4j
+    cypher -- "EXPLAIN + read" --> neo4j
+    prompt -- "introspection" --> neo4j
+
+    classDef person fill:#08427b,stroke:#052e56,color:#fff
     classDef container fill:#438dd5,stroke:#2e6295,color:#fff
     classDef component fill:#85bbf0,stroke:#5d82a8,color:#000
     classDef store fill:#f5c542,stroke:#b8901f,color:#000
     classDef external fill:#999,stroke:#6b6b6b,color:#fff
     class caller container
-    class loop,backends,tools,generator,prompt,cypher,schema,llm,embed component
+    class loop,backends,tools,generator,prompt,cypher component
     class neo4j store
     class omlx,claude external
     style agentpkg fill:none,stroke:#438dd5,stroke-dasharray:5 5
