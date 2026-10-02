@@ -4,11 +4,18 @@ tags: [projeto, graphrag, arquitetura, c4]
 
 # Arquitetura (modelo C4)
 
-Voltar: [[00 - Índice GraphRAG Anime]] · Ver também: [[01 - Visão Geral]]
+🇺🇸 [English version](08%20-%20C4%20Architecture.md)
+
+Voltar: [00 - Índice GraphRAG Anime](00%20-%20%C3%8Dndice%20GraphRAG%20Anime.md) · Ver também: [01 - Visão Geral](01%20-%20Vis%C3%A3o%20Geral.md)
 
 Três níveis do [modelo C4](https://c4model.com): contexto, contêineres e componentes. Os diagramas são Mermaid (flowchart com as cores do C4) porque o `C4Context` do Mermaid ainda é experimental e organiza mal o layout.
 
-Legenda: 🟦 pessoa · 🟦 escuro = sistema/contêiner deste projeto · ⬜ cinza = sistema externo · 🟨 = armazenamento.
+Legenda das cores:
+- **azul-marinho:** pessoa;
+- **azul:** o sistema (nível 1), seus contêineres (nível 2) e componentes (nível 3, azul-claro);
+- **amarelo:** armazenamento (Neo4j, arquivos em `data/`);
+- **cinza:** sistema externo;
+- **linha tracejada:** dependência opcional.
 
 ## Nível 1: Contexto
 
