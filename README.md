@@ -225,4 +225,4 @@ data/        API cache, state, logs and results (not in git)
 - `ADAPTED_FROM` is heuristic: some adaptations are missing, and rare cases may be matched wrongly. "Adapted from a light novel" can be answered from the anime's `fonte` property or from `ADAPTED_FROM`, and the two give different counts (55 vs. 45 for the top 500). The generator follows a convention: the source type comes from `fonte`, and `ADAPTED_FROM` is used only when the question needs the original work itself.
 - Vector search with BGE-M3 produces very close scores (0.72–0.79). Only the ranking order is meaningful.
 - Local models tend to fill gaps from memory when a tool result lacks data. Completing the tool result helped more than adding instructions to the prompt.
-- The Claude backend has unit tests with a fake client but has not yet been run with real credentials.
+- The Claude backend stays in the code but is only covered by unit tests with a fake client; the comparison with real credentials was dropped (the project uses local models only).

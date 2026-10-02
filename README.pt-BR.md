@@ -220,4 +220,4 @@ data/        cache da API, estado, logs e resultados (fora do git)
 - `ADAPTED_FROM` é heurístico: pode faltar adaptação, e casos raros podem casar errado. "Adaptado de light novel" pode ser respondido pela propriedade `fonte` do anime ou pelo `ADAPTED_FROM`, e os dois dão contagens diferentes (55 contra 45 no top 500). O gerador segue uma convenção: o tipo da obra original vem de `fonte`, e `ADAPTED_FROM` só entra quando a pergunta precisa da obra em si.
 - A busca vetorial com o BGE-M3 dá scores muito próximos entre si (0,72–0,79). Só a ordem do ranking tem valor.
 - Os modelos locais tendem a completar de memória quando falta dado no resultado da ferramenta. O que mais ajudou foi completar o resultado da ferramenta, mais do que reforçar instruções no prompt.
-- O backend do Claude tem testes unitários com cliente falso, mas ainda não foi rodado com credencial real.
+- O backend do Claude continua no código, mas só tem testes unitários com cliente falso; a comparação com credencial real foi descartada (o projeto usa só modelos locais).
