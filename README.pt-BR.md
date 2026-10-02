@@ -61,6 +61,20 @@ Se a pergunta pede algo que o grafo não guarda (bilheteria, personagens, episó
 
 Testado num MacBook M5 Pro com 24 GB. O gpt-oss-20b ocupa ~12 GB; para ele rodar junto com o Neo4j, o *memory guard* do oMLX precisa estar em `aggressive`. Em `balanced`, o servidor recusa o prompt com HTTP 400 `prefill_memory_exceeded`.
 
+## Início rápido
+
+O `./run.sh` reúne todas as etapas (`./run.sh ajuda` lista os comandos). Com os pré-requisitos da [Instalação](#instalação) prontos (client ID do MAL, oMLX com os dois modelos, Docker):
+
+```bash
+./run.sh setup        # uv sync + config/.env a partir do exemplo (preencha as chaves)
+./run.sh db           # sobe o Neo4j, espera ficar pronto e cria constraints e índices
+./run.sh check        # Neo4j, oMLX e os modelos configurados
+./run.sh dados        # top 500 + crawl + embeddings + ADAPTED_FROM (demora)
+./run.sh ui           # http://localhost:8765
+```
+
+Outros comandos: `agente [pergunta]`, `analytics "pergunta"`, `eval gerador|agente|abc|tudo`, `test`, `compartilhar` (abaixo) e `tudo` (db + dados + avaliações). As seções seguintes mostram os comandos de cada etapa.
+
 ## Instalação
 
 ```bash
@@ -105,7 +119,7 @@ $R python -m ingest.adapt --buscar              # ADAPTED_FROM; depois: load e a
 | Com todos os detalhes (`completo`) | 2.954 (500 `top`) | 2.735 (500 `top`) |
 | Esboços | 4.312 | 3.594 |
 
-23.757 `RECOMMENDS`, 7.664 `RELATED_TO`, 892 `ADAPTED_FROM`, 2.861 autores, 346 estúdios e 80 gêneros.
+23.757 `RECOMMENDS`, 7.664 `RELATED_TO`, 1.240 `ADAPTED_FROM`, 2.861 autores, 346 estúdios e 80 gêneros.
 
 ## Uso
 
@@ -125,7 +139,7 @@ $R python -m analytics "Qual estúdio tem a maior nota média entre os que têm 
 ```bash
 $R uvicorn ui.server:app --port 8765            # http://localhost:8765
 ```
-A interface não tem login. Para compartilhar, use um túnel com autenticação, por exemplo `ngrok http 8765 --basic-auth "usuario:senha"`.
+A interface não tem login. Para compartilhar, `./run.sh compartilhar` sobe a interface atrás de um túnel ngrok com senha, usando `UI_BASIC_AUTH` do `config/.env` (`usuario:senha`) ou uma senha gerada na hora.
 
 Os logs de cada pergunta ficam em `data/logs/` (`agent.jsonl`, `analytics.jsonl`).
 
@@ -151,8 +165,8 @@ Os resultados ficam em `data/eval/*.jsonl` e aparecem na aba **Avaliação** da 
 
 | Avaliação | Resultado | Mediana |
 |---|---|---|
-| Gerador de Cypher | **24/27** (13/15 no primeiro conjunto, 11/12 no segundo) | ~8 s |
-| Agente | **15/15**; ferramenta certa 15/15; **0 respostas com nota sem fonte** | ~10 s |
+| Gerador de Cypher | **25/27** (13/15 no primeiro conjunto, 12/12 no segundo) | ~8 s |
+| Agente | **15/15**; ferramenta certa 15/15; **0 respostas com nota sem fonte** | ~11 s |
 
 **O grafo ajuda? Mesmo modelo e mesmas perguntas, com ferramentas diferentes**
 
@@ -201,7 +215,7 @@ data/        cache da API, estado, logs e resultados (fora do git)
 ## Limitações conhecidas
 
 - Os dados vêm só do top 500 e da vizinhança coletada. Obras fora disso aparecem como esboço, sem nota nem gêneros.
-- `ADAPTED_FROM` é heurístico: pode faltar adaptação, e casos raros podem casar errado. "Adaptado de light novel" pode ser respondido pela propriedade `fonte` do anime ou pelo `ADAPTED_FROM`, e os dois dão contagens diferentes (55 contra 42 no top 500).
+- `ADAPTED_FROM` é heurístico: pode faltar adaptação, e casos raros podem casar errado. "Adaptado de light novel" pode ser respondido pela propriedade `fonte` do anime ou pelo `ADAPTED_FROM`, e os dois dão contagens diferentes (55 contra 45 no top 500). O gerador segue uma convenção: o tipo da obra original vem de `fonte`, e `ADAPTED_FROM` só entra quando a pergunta precisa da obra em si.
 - A busca vetorial com o BGE-M3 dá scores muito próximos entre si (0,72–0,79). Só a ordem do ranking tem valor.
 - Os modelos locais tendem a completar de memória quando falta dado no resultado da ferramenta. O que mais ajudou foi completar o resultado da ferramenta, mais do que reforçar instruções no prompt.
 - O backend do Claude tem testes unitários com cliente falso, mas ainda não foi rodado com credencial real.

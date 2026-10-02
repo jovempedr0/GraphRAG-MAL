@@ -38,7 +38,7 @@ MyAnimeList (API oficial v2)
 | Linguagem | Python | ecossistema de dados e SDKs |
 | Banco | Neo4j (Docker local) | Cypher, índice vetorial nativo, muitos tutoriais |
 | Fonte | API MAL v2 | oficial, só Client ID, recomendações no detalhe |
-| Gerador de Cypher | gpt-oss-20b via oMLX (local) | acertou 14/15 na avaliação, ~7 s por pergunta; ver [[07 - Gerador de Cypher]] |
+| Gerador de Cypher | gpt-oss-20b via oMLX (local) | acertou 25/27 na avaliação depois do crawl, ~8 s por pergunta; ver [[07 - Gerador de Cypher]] |
 | Agente | tool use com backend trocável: gpt-oss-20b (oMLX) ou Claude | loop próprio, bom para aprender; comparar local × nuvem na avaliação |
 | Embeddings | BGE-M3 via oMLX (local) | multilíngue, grátis, offline; ver [[04 - Agente GraphRAG]] |
 

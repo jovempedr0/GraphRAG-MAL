@@ -66,6 +66,20 @@ If the question asks for something the graph does not store (box office, charact
 
 Tested on a MacBook M5 Pro with 24 GB. gpt-oss-20b takes about 12 GB. For it to run next to Neo4j, oMLX's *memory guard* must be set to `aggressive`. On `balanced`, the server rejects the prompt with HTTP 400 `prefill_memory_exceeded`.
 
+## Quick start
+
+`./run.sh` wraps every step (`./run.sh ajuda` lists the commands). With the prerequisites from [Setup](#setup) in place (MAL client ID, oMLX with both models, Docker):
+
+```bash
+./run.sh setup        # uv sync + config/.env from the example (fill in the keys)
+./run.sh db           # start Neo4j, wait for it, create constraints and indexes
+./run.sh check        # Neo4j, oMLX and the configured models
+./run.sh dados        # top 500 + crawl + embeddings + ADAPTED_FROM (takes a while)
+./run.sh ui           # http://localhost:8765
+```
+
+Other commands: `agente [question]`, `analytics "question"`, `eval gerador|agente|abc|tudo`, `test`, `compartilhar` (below) and `tudo` (db + data + evaluations). The sections below show the individual commands behind each step.
+
 ## Setup
 
 ```bash
@@ -110,7 +124,7 @@ $R python -m ingest.adapt --buscar              # ADAPTED_FROM; then run load an
 | With full details (`completo`) | 2,954 (500 `top`) | 2,735 (500 `top`) |
 | Sketch nodes | 4,312 | 3,594 |
 
-23,757 `RECOMMENDS`, 7,664 `RELATED_TO`, 892 `ADAPTED_FROM`, 2,861 authors, 346 studios and 80 genres.
+23,757 `RECOMMENDS`, 7,664 `RELATED_TO`, 1,240 `ADAPTED_FROM`, 2,861 authors, 346 studios and 80 genres.
 
 ## Usage
 
@@ -130,7 +144,7 @@ $R python -m analytics "Qual estúdio tem a maior nota média entre os que têm 
 ```bash
 $R uvicorn ui.server:app --port 8765            # http://localhost:8765
 ```
-The UI has no login. To share it, use a tunnel with authentication, e.g. `ngrok http 8765 --basic-auth "user:password"`.
+The UI has no login. To share it, `./run.sh compartilhar` starts the UI behind an ngrok tunnel with basic auth, using `UI_BASIC_AUTH` from `config/.env` (`user:password`) or a generated password.
 
 Every question is logged to `data/logs/` (`agent.jsonl`, `analytics.jsonl`).
 
@@ -156,8 +170,8 @@ Results are written to `data/eval/*.jsonl` and shown in the **Avaliação** tab 
 
 | Evaluation | Result | Median |
 |---|---|---|
-| Cypher generator | **24/27** (13/15 first set, 11/12 second set) | ~8 s |
-| Agent | **15/15**; right tool 15/15; **0 answers with an ungrounded score** | ~10 s |
+| Cypher generator | **25/27** (13/15 first set, 12/12 second set) | ~8 s |
+| Agent | **15/15**; right tool 15/15; **0 answers with an ungrounded score** | ~11 s |
 
 **Does the graph help? Same model, same questions, different tools**
 
@@ -206,7 +220,7 @@ data/        API cache, state, logs and results (not in git)
 ## Known limitations
 
 - The data covers only the top 500 and the crawled neighborhood. Anything outside it is a sketch node, with no score or genres.
-- `ADAPTED_FROM` is heuristic: some adaptations are missing, and rare cases may be matched wrongly. "Adapted from a light novel" can be answered from the anime's `fonte` property or from `ADAPTED_FROM`, and the two give different counts (55 vs. 42 for the top 500).
+- `ADAPTED_FROM` is heuristic: some adaptations are missing, and rare cases may be matched wrongly. "Adapted from a light novel" can be answered from the anime's `fonte` property or from `ADAPTED_FROM`, and the two give different counts (55 vs. 45 for the top 500). The generator follows a convention: the source type comes from `fonte`, and `ADAPTED_FROM` is used only when the question needs the original work itself.
 - Vector search with BGE-M3 produces very close scores (0.72–0.79). Only the ranking order is meaningful.
 - Local models tend to fill gaps from memory when a tool result lacks data. Completing the tool result helped more than adding instructions to the prompt.
 - The Claude backend has unit tests with a fake client but has not yet been run with real credentials.

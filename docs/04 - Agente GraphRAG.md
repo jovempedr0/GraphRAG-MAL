@@ -79,13 +79,14 @@ Correção **automática**, sem LLM como juiz. Uma resposta passa se:
 - contém os textos obrigatórios (`deve_conter`, `deve_conter_algum`)
 - **não cita nenhuma nota sem fonte**: decimal da resposta que não aparece em nenhum resultado de ferramenta. É a medida direta de alucinação
 
-**Resultado depois do crawl (gpt-oss-20b): 15/15**, ferramenta certa 15/15, nenhuma nota sem fonte, mediana ~10 s.
+**Resultado depois do crawl (gpt-oss-20b): 15/15**, ferramenta certa 15/15, nenhuma nota sem fonte, mediana ~10 s. Rodada de novo depois do conserto do `sem_dados` (abaixo), da convenção `fonte` e das 1.240 `ADAPTED_FROM`: **15/15** de novo, mediana ~11 s.
 
 ### Casos que mudaram o agente
 - **Falso negativo da sinopse (uso real, pela interface):** perguntaram o nome do protagonista de Bleach. A ferramenta trouxe a sinopse, que cita Ichigo, mas o agente respondeu que o grafo não tinha personagens, porque o prompt mandava não usar nada fora das ferramentas e ele não contou a sinopse como dado. Regra nova: a sinopse pode ser usada, dizendo que veio dela. Viraram as perguntas A13 (protagonista), A14 (fillers: não há dado) e A15 (continuação: "e o personagem principal do anime?" depois de uma pergunta com erro de digitação, "bleack")
 - **Bilheteria (A11):** ver `SEM_DADOS` em [[07 - Gerador de Cypher]]. O gerador chegou a devolver a popularidade numa coluna chamada `bilheteria`; pela `consulta_cypher`, o agente receberia esse número como se fosse bilheteria. Agora recebe `sem_dados` e diz que o grafo não tem a informação
 - **Interseção (A7, "recomendado para Death Note e para Code Geass"):** antes do crawl, o agente chamava `expandir_vizinhanca` duas vezes e cruzava as listas. Com o grafo maior, cada título tem dezenas de recomendações, o corte em 15 escondia a maior parte da interseção e a resposta saía incompleta sem aviso. Duas mudanças: o aviso `recomendacoes_obs` no resultado e a orientação no prompt de mandar "o que X e Y têm em comum" para `consulta_cypher`. Agora a A7 acerta 18/18
 - **Token do gpt-oss vazando no nome da ferramenta (A10):** numa chamada, o nome veio como `consulta_cypher<|channel|>commentary`, um pedaço do formato *harmony* do gpt-oss que o oMLX não separou. O loop devolveu erro de ferramenta desconhecida e o modelo repetiu a chamada com o nome certo, então a pergunta passou. Agora o `OmlxBackend` corta o nome no `<|` antes de procurar a ferramenta (`tool_name`). Na mesma pergunta, a primeira chamada mandou Cypher com propriedades em inglês (`a.genres`, `a.episodes`), que a ferramenta recusou
+- **`sem_dados` para título citado (A1, "parecido com Monster, mas mais curto"):** numa rodada, o gerador entendeu "recomendado por Monster" como estúdio e respondeu `SEM_DADOS`, com ou sem a convenção `fonte`; o agente repassou que não havia dado. Em vez de mexer no prompt do gerador, o resultado `sem_dados` da `consulta_cypher` agora pede para conferir com `expandir_vizinhanca` quando a pergunta cita um título. Na rodada seguinte a A1 fez exatamente isso (2 passos) e passou 5/5
 
 ## A/B/C: o grafo ajuda? (2026-10-01)
 Mesmo modelo (gpt-oss-20b), mesmo loop, mesmas 15 perguntas; muda o que o agente pode consultar:

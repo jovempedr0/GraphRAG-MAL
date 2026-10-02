@@ -17,6 +17,7 @@ Voltar: [[00 - Índice GraphRAG Anime]]
     - [x] avaliação com 15 perguntas e escolha do modelo (gpt-oss-20b, 14/15)
     - [x] perguntas novas na avaliação (fora da nota 06): 6/12 → 12/12 com a checagem de valores; falta um lote guardado sem olhar
     - [x] `SEM_DADOS` para perguntas sem dado no grafo; depois do crawl: 24/27
+    - [x] convenção `fonte` × `ADAPTED_FROM` para "adaptado de X": 25/27
     - [ ] resumo e gráfico: o resumo fica para o agente; o gráfico foi adiado
 - [ ] 7. Agente com as três ferramentas (`consulta_cypher` reaproveita o gerador da etapa 6) → [[04 - Agente GraphRAG]]
     - [x] v1: backends oMLX e Claude, três ferramentas, loop com limite de passos, CLI e log
@@ -67,5 +68,7 @@ Com o backend trocável do agente, a configuração C rodaria duas vezes (gpt-os
 - 2026-10-01: preferir consertos em código e no resultado das ferramentas a instruções no prompt; reavaliar sempre que o prompt mudar
 - 2026-10-01: A/B/C com o mesmo modelo e o prompt de C intocado; A e B trocam só o bloco das ferramentas
 - 2026-10-01: comparação com o backend Claude descartada; o projeto fica só com modelos locais
-- Pendente: convenção `fonte` × `ADAPTED_FROM` para "adaptado de X"
+- 2026-10-01: "adaptado de X" usa `a.fonte`; `ADAPTED_FROM` só quando a pergunta precisa da obra original (gerador: 25/27)
+- 2026-10-01: `ADAPTED_FROM` herdado também por histórias paralelas, recapitulações e versões alternativas (892 → 1.240 arestas)
+- 2026-10-01: `./run.sh` como ponto de entrada único (setup, dados, interface, avaliações); `compartilhar` sobe a interface num túnel ngrok com senha
 - Pendente: GDS ou Cypher puro para centralidade/comunidades ([[07 - Gerador de Cypher]])

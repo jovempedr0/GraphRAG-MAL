@@ -55,7 +55,11 @@ uv run --env-file config/.env python -m ingest.load
 - `--min-recomendacoes` evita gastar requisições com esboços que aparecem uma vez só
 - rodadas feitas: uma da fronteira inteira e uma segunda só para os esboços mais conectados. Resultado: 2.954 animes e 2.735 mangás completos (eram 500 + 500)
 
-Depois do crawl: `ingest.embed` (embeddings dos nós novos) e `ingest.adapt --buscar` (`ADAPTED_FROM`, ver [[03 - Modelo do Grafo]]). O pipeline inteiro rodou sem supervisão, encadeado num script
+Depois do crawl: `ingest.embed` (embeddings dos nós novos) e `ingest.adapt --buscar` (`ADAPTED_FROM`, ver [[03 - Modelo do Grafo]]). O pipeline inteiro rodou sem supervisão, encadeado num script, que depois virou o `./run.sh` da raiz:
+```
+./run.sh dados [N]     # ingest + crawl: coleta, carga, embeddings e ADAPTED_FROM
+./run.sh crawl         # só a fronteira, refazendo embeddings e ADAPTED_FROM
+```
 
 ## Cuidados
 - Respeitar rate limit (fila + sleep)

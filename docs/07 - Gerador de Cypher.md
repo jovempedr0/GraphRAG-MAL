@@ -178,7 +178,17 @@ O grafo passou de ~1.000 para ~13.600 nós de obra (2.954 animes e 2.735 mangás
 **As três falhas:**
 - **E12 (Jaccard), erro silencioso novo:** `interSize / unionSize` com dois inteiros é **divisão inteira** no Cypher, então a similaridade dá 0 ou 1 e o filtro `>= 0.5` zera o resultado. O modelo recebeu a dica de resultado vazio e respondeu vazio duas vezes. **Virou checagem no lint:** divisão em que os dois lados são `size()`, `count()`, `length()`, `COUNT {}` ou aliases deles, sem `toFloat`. Na rodada seguinte o modelo recebeu o erro e corrigiu na 2ª tentativa (`toFloat(interSize) / unionSize`); nenhuma resposta correta das avaliações anteriores dispara a checagem. A E12 continua errada, mas agora pelo motivo de antes do crawl: trata "é recomendado junto?" como filtro, não como coluna
 - **E16 (cadeia de sequências):** sintaxe inventada nas três tentativas: `-[:RELATED_TO {tipo: 'sequel'}*]->` (o `*` vem antes do mapa), depois as funções `index()` e `node()`, que não existem. O `EXPLAIN` acusa, mas o modelo troca um erro por outro
-- **N3 (adaptados de light novel):** usou `ADAPTED_FROM` (42) em vez da propriedade `fonte` (55). As duas leituras são defensáveis; falta uma convenção dizendo qual vale. Adiado
+- **N3 (adaptados de light novel):** usou `ADAPTED_FROM` (42) em vez da propriedade `fonte` (55). As duas leituras são defensáveis; faltava uma convenção dizendo qual vale (ver abaixo)
+
+**Convenção `fonte` × `ADAPTED_FROM` (2026-10-01).** Uma linha nas convenções de `analytics/schema.py`: "adaptado de light novel/mangá/..." (tipo da obra original, contagens e proporções por origem) usa `a.fonte`, que está completa; `ADAPTED_FROM` fica para quando a pergunta precisa da obra em si (qual mangá originou X, autor ou nota do original, mangás com ou sem anime). Como é prompt novo, as 27 perguntas rodaram de novo:
+
+| | Antes da convenção | Com a convenção |
+|---|---|---|
+| Antigas (15) | 13/15 | 13/15 (E12, E16) |
+| Novas (12) | 11/12 | **12/12** |
+| Total | 24/27 | **25/27 (93%)**, mediana ~8 s |
+
+A N3 passou e nenhuma outra caiu. E12 e E16 seguem com as falhas descritas acima
 
 ## Código
 | Arquivo | Papel |
@@ -198,4 +208,3 @@ O grafo passou de ~1.000 para ~13.600 nós de obra (2.954 animes e 2.735 mangás
 - Quantos exemplos few-shot cabem antes de piorar (ou encarecer) a geração?
 - O gerador generaliza? Falta um lote de perguntas guardado sem olhar (as 12 novas já orientaram ajustes)
 - Vale um exemplo few-shot de caminho de tamanho variável? Os modelos pequenos erraram as cadeias (E15, E16), e depois do `SEM_DADOS` o gpt-oss também erra a E16. Mas exemplo novo é prompt novo, e prompt novo já derrubou outras perguntas
-- `fonte` ou `ADAPTED_FROM` para "adaptado de X" (N3)
