@@ -34,6 +34,8 @@ Neo4j  ── graph: Anime, Manga, Genre, Studio, Author
 CLI  ·  web UI (ui/)  ·  automatic evaluation (eval/)
 ```
 
+For the full picture, read the C4 architecture diagrams in [`docs/08 - Arquitetura C4.md`](docs/08%20-%20Arquitetura%20C4.md) (in Portuguese): system context, containers, and the components of the agent and the Cypher generator.
+
 **The agent's three tools**
 
 | Tool | Purpose |
@@ -213,7 +215,7 @@ agent/       backends (oMLX / Claude), tools, loop, CLI
 ui/          FastAPI server and web page
 eval/        questions and evaluation scripts
 tests/       pytest (uv run pytest)
-docs/        project notes, in Portuguese (overview, graph model, roadmap, decisions)
+docs/        project notes, in Portuguese (overview, C4 architecture, graph model, roadmap, decisions)
 data/        API cache, state, logs and results (not in git)
 ```
 

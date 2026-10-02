@@ -16,6 +16,7 @@ Projeto de aprendizado em **programação agêntica**: ingerir dados do MyAnimeL
 - [[05 - Roadmap e Avaliação]]
 - [[06 - Consultas Cypher]]
 - [[07 - Gerador de Cypher]]
+- [[08 - Arquitetura C4]]
 
 ## Origem da ideia
 > Faz um RPA no MyAnimeList e salva num banco de grafo com os animes, mangás, com nota e gênero e recomendações. Aí tu faz um agente com graph-rag pra consumir isso aí.
